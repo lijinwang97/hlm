@@ -1,0 +1,25 @@
+[files]
+input_file = "input_1080p.mp4"   # 输入文件路径
+output_file = "output.mp4" # 输出文件路径
+
+[logger]
+level = "INFO"       # 日志级别：INFO、WARN、ERROR、DEBUG
+target = "both"      # 控制台输出：console，文件输出：file，两者兼顾：both
+base_name = "ffmpeg" # 日志前缀名，如：ffmpeg_20240822_194845.log
+use_async = true     # 是否异步记录日志
+max_file_size = 500  # 日志文件大小上限，单位：MB
+max_files = 3        # 日志文件个数上限
+
+[video]
+codec = "libx264" # 视频编码器 (如 h264软编：libx264，h264硬编：h264_nvenc，h265硬编：hevc_nvenc)
+bitrate = 3000       # 视频比特率 (kbps)
+width = 1080         # 视频宽
+height = 1920        # 视频高
+framerate = 25       # 帧率 (fps)
+gop_size = 60        # GOP 大小 (关键帧间的帧数)
+
+[audio]
+codec = "aac"       # 音频编码器 (如 aac, opus)
+bitrate = 128       # 音频比特率 (kbps)
+sample_rate = 44100 # 采样率 (Hz)
+channels = 2        # 声道数量 (1: 单声道, 2: 立体声)
