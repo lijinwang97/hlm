@@ -13,19 +13,19 @@ extern "C" {
 using namespace spdlog;
 
 class HlmDecoder {
- public:
-  HlmDecoder(int stream_index);
-  ~HlmDecoder();
+   public:
+    HlmDecoder(int stream_index);
+    ~HlmDecoder();
 
-  bool initDecoder(AVFormatContext* format_context);
-  bool decodePacket(AVPacket* pkt, AVFrame* frame);
-  AVCodecContext* getContext() const;
+    bool initDecoder(AVFormatContext* format_context);
+    bool decodePacket(AVPacket* pkt, AVFrame* frame);
+    AVCodecContext* getContext() const;
 
- private:
-  AVCodecContext* codec_context_;
-  AVFormatContext* format_context_;
-  std::string media_type_; 
-  int stream_index_ = -1;
+   private:
+    AVCodecContext* codec_context_;
+    AVFormatContext* format_context_;
+    std::string media_type_;
+    int stream_index_ = -1;
 };
 
 #endif  // HLM_DECODER_H

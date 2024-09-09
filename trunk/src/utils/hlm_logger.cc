@@ -1,6 +1,8 @@
 #include "hlm_logger.h"
+
 #include <spdlog/async.h>
 #include <spdlog/async_logger.h>
+
 #include <chrono>
 #include <iomanip>
 #include <sstream>
@@ -13,7 +15,6 @@ void Logger::init(LogLevel level,
                   bool useAsync,
                   std::size_t maxFileSize,
                   std::size_t maxFiles) {
-
     std::vector<spdlog::sink_ptr> sinks;
     if (target == OutputTarget::Console || target == OutputTarget::Both) {
         sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());

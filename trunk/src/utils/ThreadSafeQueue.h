@@ -1,19 +1,19 @@
 #ifndef THREADSAFEQUEUE_H
 #define THREADSAFEQUEUE_H
 
-#include <queue>
-#include <mutex>
 #include <condition_variable>
+#include <mutex>
+#include <queue>
 
 template <typename T>
 class ThreadSafeQueue {
-public:
+   public:
     void push(T value);
     T pop();
     bool empty() const;
     std::size_t size() const;
 
-private:
+   private:
     mutable std::mutex mutex_;
     std::queue<T> queue_;
     std::condition_variable cond_var_;
@@ -47,4 +47,4 @@ std::size_t ThreadSafeQueue<T>::size() const {
     return queue_.size();
 }
 
-#endif // THREADSAFEQUEUE_H
+#endif  // THREADSAFEQUEUE_H

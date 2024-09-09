@@ -6,12 +6,12 @@
 using namespace crow;
 
 class HlmHttpServer {
-public:
+   public:
     HlmHttpServer();
     void start(int port);
     void setLogLevel(crow::LogLevel level);
 
-private:
+   private:
     void initRoutes();
 
     response handleScreenshot(const request& req);
@@ -21,4 +21,4 @@ private:
     crow::SimpleApp app_;
 };
 
-#endif // HLM_HTTP_SERVER_H
+#endif  // HLM_HTTP_SERVER_H

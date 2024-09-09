@@ -1,14 +1,15 @@
 #ifndef LOGGER_H
 #define LOGGER_H
 
-#include <spdlog/spdlog.h>
-#include <spdlog/sinks/stdout_color_sinks.h>
 #include <spdlog/sinks/rotating_file_sink.h>
+#include <spdlog/sinks/stdout_color_sinks.h>
+#include <spdlog/spdlog.h>
+
 #include <memory>
 #include <string>
 
 class Logger {
-public:
+   public:
     enum class LogLevel {
         Trace,
         Debug,
@@ -29,42 +30,42 @@ public:
                      OutputTarget target = OutputTarget::Both,
                      const std::string& base_name = "logs",
                      bool useAsync = false,
-                     std::size_t maxFileSize = 104857600, // 100 MB
+                     std::size_t maxFileSize = 104857600,  // 100 MB
                      std::size_t maxFiles = 3);
 
     static void setLogLevel(LogLevel level);
 
-    template<typename... Args>
+    template <typename... Args>
     static void TRACE(const char* fmt, const Args&... args) {
         logger->trace(fmt, args...);
     }
 
-    template<typename... Args>
+    template <typename... Args>
     static void DEBUG(const char* fmt, const Args&... args) {
         logger->debug(fmt, args...);
     }
 
-    template<typename... Args>
+    template <typename... Args>
     static void INFO(const char* fmt, const Args&... args) {
         logger->info(fmt, args...);
     }
 
-    template<typename... Args>
+    template <typename... Args>
     static void WARN(const char* fmt, const Args&... args) {
         logger->warn(fmt, args...);
     }
 
-    template<typename... Args>
+    template <typename... Args>
     static void ERROR(const char* fmt, const Args&... args) {
         logger->error(fmt, args...);
     }
 
-    template<typename... Args>
+    template <typename... Args>
     static void CRITICAL(const char* fmt, const Args&... args) {
         logger->critical(fmt, args...);
     }
 
-private:
+   private:
     static std::shared_ptr<spdlog::logger> logger;
 
     static std::string generateLogFileName(const std::string& base_name);
@@ -77,4 +78,4 @@ private:
 #define hlm_error(...) Logger::ERROR(__VA_ARGS__)
 #define hlm_critical(...) Logger::CRITICAL(__VA_ARGS__)
 
-#endif // LOGGER_H
+#endif  // LOGGER_H
