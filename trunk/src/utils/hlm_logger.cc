@@ -1,4 +1,4 @@
-#include "Logger.h"
+#include "hlm_logger.h"
 #include <spdlog/async.h>
 #include <spdlog/async_logger.h>
 #include <chrono>
@@ -33,7 +33,7 @@ void Logger::init(LogLevel level,
 
     spdlog::set_default_logger(logger);
     setLogLevel(level);
-    spdlog::set_pattern("%^[%Y-%m-%d %H:%M:%S] [%l] %v%$");
+    spdlog::set_pattern("%^[%Y-%m-%d %H:%M:%S] [%t] [%l] %v%$");
 }
 
 void Logger::setLogLevel(LogLevel level) {

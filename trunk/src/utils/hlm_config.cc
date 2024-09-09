@@ -1,9 +1,10 @@
-#include "Config.h"
+#include "hlm_config.h"
 
 #include <iostream>
 #include <toml++/toml.hpp>
 
 FileConfig Config::file_config;
+HttpConfig Config::http_config;
 LoggerConfig Config::logger_config;
 VideoConfig Config::video_config;
 AudioConfig Config::audio_config;
@@ -20,6 +21,10 @@ void Config::load(const std::string& config_file) {
     auto& file_cfg = *config["files"].as_table();
     file_config.input_file = file_cfg["input_file"].value_or("input.mp4");
     file_config.output_file = file_cfg["output_file"].value_or("output.mp4");
+
+    // 读取Http配置
+    auto& http_cfg = *config["http"].as_table();
+    http_config.port = http_cfg["port"].value_or(6088);
 
     // 读取日志配置
     auto& logger_cfg = *config["logger"].as_table();
@@ -70,17 +75,20 @@ void Config::printAllConfigs() const {
   // 打印文件配置
   hlm_info("File Configurations: Input File: {}, Output File: {}", file_config.input_file, file_config.output_file);
 
+  // 打印Http配置
+  hlm_info("Http Configurations: port: {}", http_config.port);
+
   // 打印日志配置
   hlm_info("Logger Configurations: Level: {}, Target: {}, Base Name: {}, Use Async: {}, Max File Size: {}, Max Files: {}",
-       logger_config.level, logger_config.target, logger_config.base_name, logger_config.use_async,
-       logger_config.max_file_size, logger_config.max_files);
+           logger_config.level, logger_config.target, logger_config.base_name, logger_config.use_async,
+           logger_config.max_file_size, logger_config.max_files);
 
   // 打印视频配置
   hlm_info("Video Configurations: Codec: {}, Bitrate: {}, Resolution: {}x{}, Framerate: {}, GOP Size: {}",
-       video_config.codec, video_config.bitrate, video_config.width, video_config.height,
-       video_config.framerate, video_config.gop_size);
+           video_config.codec, video_config.bitrate, video_config.width, video_config.height,
+           video_config.framerate, video_config.gop_size);
 
   // 打印音频配置
   hlm_info("Audio Configurations: Codec: {}, Bitrate: {}, Sample Rate: {}, Channels: {}",
-       audio_config.codec, audio_config.bitrate, audio_config.sample_rate, audio_config.channels);
+           audio_config.codec, audio_config.bitrate, audio_config.sample_rate, audio_config.channels);
 }

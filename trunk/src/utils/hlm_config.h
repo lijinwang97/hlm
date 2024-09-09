@@ -2,11 +2,15 @@
 
 #include <string>
 
-#include "Logger.h"
+#include "hlm_logger.h"
 
 struct FileConfig {
   std::string input_file;
   std::string output_file;
+};
+
+struct HttpConfig {
+  int port;
 };
 
 struct LoggerConfig {
@@ -44,6 +48,9 @@ class Config {
   const std::string& getInputFile() const { return file_config.input_file; }
   const std::string& getOutputFile() const { return file_config.output_file; }
 
+  // Http Config Accessors
+  const int getHttpPort() const { return http_config.port; }
+
   // Logger Config Accessors
   Logger::LogLevel getLogLevel() const { return parseLogLevel(logger_config.level); }
   Logger::OutputTarget getLogTarget() const { return parseOutputTarget(logger_config.target); }
@@ -76,6 +83,7 @@ class Config {
   Config& operator=(const Config&) = delete;
 
   static FileConfig file_config;
+  static HttpConfig http_config;
   static LoggerConfig logger_config;
   static VideoConfig video_config;
   static AudioConfig audio_config;
