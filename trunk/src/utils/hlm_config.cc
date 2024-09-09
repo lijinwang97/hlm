@@ -76,7 +76,7 @@ void Config::printAllConfigs() const {
   hlm_info("File Configurations: Input File: {}, Output File: {}", file_config.input_file, file_config.output_file);
 
   // 打印Http配置
-  hlm_info("Http Configurations: port: {}", http_config.port);
+  hlm_info("Http Configurations: Port: {}", http_config.port);
 
   // 打印日志配置
   hlm_info("Logger Configurations: Level: {}, Target: {}, Base Name: {}, Use Async: {}, Max File Size: {}, Max Files: {}",

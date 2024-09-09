@@ -23,7 +23,7 @@ int main(int argc, char* argv[]) {
   init(argv[1]);
 
   HlmHttpServer server;
-  server.Start(CONF.getHttpPort());
+  server.start(CONF.getHttpPort());
 
   return 0;
 }

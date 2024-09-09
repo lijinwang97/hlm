@@ -8,15 +8,15 @@ using namespace crow;
 class HlmHttpServer {
 public:
     HlmHttpServer();
-    void Start(int port);
-    void SetLogLevel(crow::LogLevel level);
+    void start(int port);
+    void setLogLevel(crow::LogLevel level);
 
 private:
-    void InitRoutes();
+    void initRoutes();
 
-    response HandleScreenshot(const request& req);
-    response HandleRecording(const request& req);
-    response HandleMix(const request& req);
+    response handleScreenshot(const request& req);
+    response handleRecording(const request& req);
+    response handleMix(const request& req);
 
     crow::SimpleApp app_;
 };

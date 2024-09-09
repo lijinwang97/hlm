@@ -22,6 +22,6 @@ int main(int argc, char* argv[]) {
   }
   init(argv[1]);
   HlmHttpServer server;
-  server.Start(6088);
+  server.start(6088);
   return 0;
 }

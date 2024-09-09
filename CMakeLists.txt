@@ -24,6 +24,8 @@ link_directories(${THIRD_PARTY}/ffmpeg/x264)
 add_executable(hlm 
     trunk/src/main/hlm_main_server.cc
     trunk/src/app/hlm_http_server.cc
+    trunk/src/core/hlm_decoder.cc
+    trunk/src/core/hlm_encoder.cc
     trunk/src/utils/hlm_logger.cc
     trunk/src/utils/hlm_config.cc
     trunk/src/utils/hlm_design_patterns.cc
