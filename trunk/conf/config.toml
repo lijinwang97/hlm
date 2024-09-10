@@ -5,6 +5,9 @@ output_file = "output.mp4"     # 输出文件路径
 [http]
 port = 6088
 
+[task]
+max_tasks = 3
+
 [logger]
 level = "INFO"      # 日志级别：INFO、WARN、ERROR、DEBUG
 target = "both"     # 控制台输出：console，文件输出：file，两者兼顾：both

@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
   }
   init(argv[1]);
 
-  HlmHttpServer server;
+  HlmHttpServer server(CONF.getMaxTasks());
   server.start(CONF.getHttpPort());
 
   return 0;

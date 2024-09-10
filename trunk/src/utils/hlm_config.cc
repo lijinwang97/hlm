@@ -5,6 +5,7 @@
 
 FileConfig Config::file_config;
 HttpConfig Config::http_config;
+TaskConfig Config::task_config;
 LoggerConfig Config::logger_config;
 VideoConfig Config::video_config;
 AudioConfig Config::audio_config;
@@ -25,6 +26,10 @@ void Config::load(const std::string& config_file) {
         // 读取Http配置
         auto& http_cfg = *config["http"].as_table();
         http_config.port = http_cfg["port"].value_or(6088);
+
+        // 读取Http配置
+        auto& task_cfg = *config["task"].as_table();
+        task_config.max_tasks = task_cfg["max_tasks"].value_or(3);
 
         // 读取日志配置
         auto& logger_cfg = *config["logger"].as_table();
@@ -77,6 +82,9 @@ void Config::printAllConfigs() const {
 
     // 打印Http配置
     hlm_info("Http Configurations: Port: {}", http_config.port);
+
+    // 打印Http配置
+    hlm_info("Task Configurations: Max Tasks: {}", task_config.max_tasks);
 
     // 打印日志配置
     hlm_info("Logger Configurations: Level: {}, Target: {}, Base Name: {}, Use Async: {}, Max File Size: {}, Max Files: {}",

@@ -13,6 +13,10 @@ struct HttpConfig {
     int port;
 };
 
+struct TaskConfig {
+    int max_tasks;
+};
+
 struct LoggerConfig {
     std::string level;
     std::string target;
@@ -51,6 +55,9 @@ class Config {
     // Http Config Accessors
     const int getHttpPort() const { return http_config.port; }
 
+    // Task Config Accessors
+    const int getMaxTasks() const { return task_config.max_tasks; }
+
     // Logger Config Accessors
     Logger::LogLevel getLogLevel() const { return parseLogLevel(logger_config.level); }
     Logger::OutputTarget getLogTarget() const { return parseOutputTarget(logger_config.target); }
@@ -84,6 +91,7 @@ class Config {
 
     static FileConfig file_config;
     static HttpConfig http_config;
+    static TaskConfig task_config;
     static LoggerConfig logger_config;
     static VideoConfig video_config;
     static AudioConfig audio_config;
