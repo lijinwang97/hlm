@@ -1,5 +1,5 @@
-#ifndef TASK_H
-#define TASK_H
+#ifndef HLM_TASK_H
+#define HLM_TASK_H
 
 #include <iostream>
 #include <memory>
@@ -23,14 +23,13 @@ class HlmTask {
 
     TaskType getType() const;
 
-    // 纯虚函数，让每个子类实现自己的参数处理
     virtual void execute() = 0;
 
    protected:
     TaskType type_;
 };
 
-// HlmScreenshotTask（按时间间隔截图）
+// 按时间间隔截图
 class HlmScreenshotTask : public HlmTask {
 public:
     HlmScreenshotTask(const  string& stream_url, const  string& output_dir, const  string& filename_prefix, int interval);
@@ -44,7 +43,7 @@ private:
     int interval_;
 };
 
-// HlmPercentageScreenshotTask（按百分比截图）
+// 按百分比截图
 class HlmPercentageScreenshotTask : public HlmTask {
 public:
     HlmPercentageScreenshotTask(const  string& stream_url, const  string& output_dir, const  string& filename_prefix, int percentage);
@@ -58,7 +57,7 @@ private:
     int percentage_;
 };
 
-// HlmImmediateScreenshotTask（立即截图）
+// 立即截图
 class HlmImmediateScreenshotTask : public HlmTask {
 public:
     HlmImmediateScreenshotTask(const  string& stream_url, const  string& output_dir, const  string& filename_prefix);
@@ -71,7 +70,7 @@ private:
      string filename_prefix_;
 };
 
-// HlmSpecificTimeScreenshotTask（指定时间点截图）
+// 指定时间点截图
 class HlmSpecificTimeScreenshotTask : public HlmTask {
 public:
     HlmSpecificTimeScreenshotTask(const  string& stream_url, const  string& output_dir, const  string& filename_prefix, int timeSecond);
@@ -129,4 +128,4 @@ class HlmTaskManager {
     mutex mutex_;
 };
 
-#endif  // TASK_H
+#endif  // HLM_TASK_H

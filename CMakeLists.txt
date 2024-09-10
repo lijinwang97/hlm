@@ -30,7 +30,6 @@ add_executable(hlm
     # trunk/src/core/hlm_encoder.cc
     trunk/src/utils/hlm_logger.cc
     trunk/src/utils/hlm_config.cc
-    trunk/src/utils/hlm_design_patterns.cc
 )
 
 # 添加单元测试的可执行文件
