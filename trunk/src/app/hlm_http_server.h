@@ -27,8 +27,8 @@ class HlmHttpServer {
     response startScreenshot(const json::rvalue& body);
     response stopScreenshot(const json::rvalue& body);
 
-    response handleRecording(const request& req);
-    response handleMix(const request& req);
+    response manageRecordingReq(const request& req);
+    response manageMixReq(const request& req);
 
     // 装饰器模式：包装处理函数，添加日志功能
     response logWrapper(const request& req, function<response(const request&)> handler);

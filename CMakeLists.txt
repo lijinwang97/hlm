@@ -32,15 +32,6 @@ add_executable(hlm
     trunk/src/utils/hlm_config.cc
 )
 
-# 添加单元测试的可执行文件
-# add_executable(hlm_utest_http 
-#     trunk/src/utest/hlm_utest_http.cc
-#     trunk/src/app/hlm_http_server.cc
-#     trunk/src/utils/hlm_logger.cc
-#     trunk/src/utils/hlm_config.cc
-#     trunk/src/utils/hlm_design_patterns.cc
-# )
-
 # 链接FFmpeg库
 target_link_libraries(hlm
     avformat
@@ -53,8 +44,8 @@ target_link_libraries(hlm
     ssl
     crypto
     pthread
-    z
     rt
+    z
     x264
     x265
     bz2
@@ -73,6 +64,15 @@ target_link_libraries(hlm
     X11
     spdlog
 )
+
+# 添加单元测试的可执行文件
+# add_executable(hlm_utest_http 
+#     trunk/src/utest/hlm_utest_http.cc
+#     trunk/src/app/hlm_http_server.cc
+#     trunk/src/utils/hlm_logger.cc
+#     trunk/src/utils/hlm_config.cc
+#     trunk/src/utils/hlm_design_patterns.cc
+# )
 
 # target_link_libraries(hlm_utest_http
 #     avformat

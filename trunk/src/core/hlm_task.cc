@@ -56,21 +56,23 @@ void HlmMixingTask::execute() {
 
 HlmTaskManager::HlmTaskManager(int maxConcurrentTasks) : max_tasks_(maxConcurrentTasks) {}
 
-bool HlmTaskManager::addTask(shared_ptr<HlmTask> task, const string& stream_url, const string& method) {
+HlmTaskAddStatus HlmTaskManager::addTask(shared_ptr<HlmTask> task, const string& stream_url, const string& method) {
     lock_guard<mutex> lock(mutex_);
     string task_key = createTaskKey(stream_url, method);
     if (active_task_keys_.count(task_key) > 0) {
-        return false;
+        return HlmTaskAddStatus::TaskAlreadyRunning;
     }
 
     if (active_tasks_.size() >= max_tasks_) {
         task_queue_.push(task);
-        return false;
+        hlm_info("Task queued. Current active tasks: {}/{}. Queued tasks: {}", active_tasks_.size(), max_tasks_, task_queue_.size());
+        return HlmTaskAddStatus::TaskQueued;
     } else {
         active_tasks_.push_back(task);
         active_task_keys_[task_key] = true;
+        hlm_info("Task started for stream_url: {}, method: {}. Active tasks: {}/{}", stream_url, method, active_tasks_.size(), max_tasks_);
         executeTask(task, task_key);
-        return true;
+        return HlmTaskAddStatus::TaskStarted;
     }
 }
 
@@ -87,8 +89,10 @@ bool HlmTaskManager::removeTask(const string& streamUrl, const string& method) {
         }
 
         active_task_keys_.erase(task_key);
+        hlm_info("Task removed for stream_url: {}, method: {}. Active tasks: {}/{}", streamUrl, method, active_tasks_.size(), max_tasks_);
         return true;
     }
+    hlm_info("No active task found for stream_url: {}, method: {}", streamUrl, method);
     return false;
 }
 
@@ -96,6 +100,7 @@ void HlmTaskManager::taskCompleted(shared_ptr<HlmTask> task, const string& task_
     lock_guard<mutex> lock(mutex_);
     active_tasks_.erase(remove(active_tasks_.begin(), active_tasks_.end(), task), active_tasks_.end());
     active_task_keys_.erase(task_key);
+    hlm_info("Task completed for key: {}. Active tasks: {}/{}", task_key, active_tasks_.size(), max_tasks_);
 
     if (!task_queue_.empty()) {
         auto next_task = task_queue_.front();
@@ -104,6 +109,7 @@ void HlmTaskManager::taskCompleted(shared_ptr<HlmTask> task, const string& task_
         string next_task_key = createTaskKey(next_task->getStreamUrl(), next_task->getMethod());
         active_tasks_.push_back(next_task);
         active_task_keys_[next_task_key] = true;
+        hlm_info("Next task started for key: {}. Active tasks: {}/{}", next_task_key, active_tasks_.size(), max_tasks_);
         executeTask(next_task, next_task_key);
     }
 }
@@ -113,7 +119,7 @@ void HlmTaskManager::executeTask(shared_ptr<HlmTask> task, const string& task_ke
         task->execute();
 
         // 模拟任务执行时间
-        this_thread::sleep_for(chrono::seconds(5));
+        this_thread::sleep_for(chrono::seconds(30));
 
         taskCompleted(task, task_key);
     }).detach();

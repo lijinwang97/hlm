@@ -20,13 +20,13 @@ void HlmHttpServer::initRoutes() {
 
     CROW_ROUTE(app_, "/record").methods(HTTPMethod::Post)([this](const request& req) {
         return logWrapper(req, [this](const request& req) {
-            return handleRecording(req);
+            return manageRecordingReq(req);
         });
     });
 
     CROW_ROUTE(app_, "/mix").methods(HTTPMethod::Post)([this](const request& req) {
         return logWrapper(req, [this](const request& req) {
-            return handleMix(req);
+            return manageMixReq(req);
         });
     });
 }
@@ -85,14 +85,22 @@ response HlmHttpServer::startScreenshot(const json::rvalue& body) {
     try {
         auto strategy = HlmScreenshotStrategyFactory::createStrategy(method);
         auto task = strategy->createTask(stream_url, method, output_dir, filename_prefix, body);
-        if (task_manager_.addTask(task, stream_url, method)) {
-            return createJsonResponse(SUCCESS, "Screenshot task started");
-        } else {
-            return createJsonResponse(QUEUED, "Task queued, waiting for execution");
+        HlmTaskAddStatus status = task_manager_.addTask(task, stream_url, method);
+        switch (status) {
+            case HlmTaskAddStatus::TaskAlreadyRunning:
+                return createJsonResponse(INVALID_REQUEST, "A screenshot task with the same stream URL and method is already running.");
+            case HlmTaskAddStatus::TaskQueued:
+                return createJsonResponse(QUEUED, "Task queued, waiting for execution.");
+            case HlmTaskAddStatus::TaskStarted:
+                return createJsonResponse(SUCCESS, "Screenshot task started.");
+            case HlmTaskAddStatus::QueueFull:
+                return createJsonResponse(INVALID_REQUEST, "Task queue is full, unable to add task.");
         }
     } catch (const invalid_argument& e) {
         return createJsonResponse(INVALID_REQUEST, e.what());
     }
+
+    return createJsonResponse(SUCCESS, "Screenshot started successfully");
 }
 
 response HlmHttpServer::stopScreenshot(const json::rvalue& body) {
@@ -106,7 +114,7 @@ response HlmHttpServer::stopScreenshot(const json::rvalue& body) {
     }
 }
 
-response HlmHttpServer::handleRecording(const request& req) {
+response HlmHttpServer::manageRecordingReq(const request& req) {
     auto body = json::load(req.body);
     if (!body) {
         return response(400, "Invalid JSON");
@@ -115,13 +123,13 @@ response HlmHttpServer::handleRecording(const request& req) {
     int duration = body["duration"].i();
     string output_file = body["output_file"].s();
 
-    hlm_info("handleRecording duration:{} output_file:{} output:{}", duration, output_file);
+    hlm_info("manageRecordingReq duration:{} output_file:{} output:{}", duration, output_file);
     // start_recording(output_file, duration);
 
     return response(200, "Recording started!");
 }
 
-response HlmHttpServer::handleMix(const request& req) {
+response HlmHttpServer::manageMixReq(const request& req) {
     auto body = json::load(req.body);
     if (!body) {
         return response(400, "Invalid JSON");
@@ -131,7 +139,7 @@ response HlmHttpServer::handleMix(const request& req) {
     string input2 = body["input2"].s();
     string output = body["output"].s();
 
-    hlm_info("handleMix input1:{} input2:{} output:{}", input1, input2, output);
+    hlm_info("manageMixReq input1:{} input2:{} output:{}", input1, input2, output);
     // mix_streams(input1, input2, output);
 
     return response(200, "Mixing successful!");

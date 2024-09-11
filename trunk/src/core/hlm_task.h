@@ -117,12 +117,19 @@ namespace HlmTaskAction {
     const string Stop = "stop";
 }
 
+enum class HlmTaskAddStatus {
+    TaskAlreadyRunning,   // 已有相同任务在执行
+    TaskQueued,           // 任务已加入队列
+    TaskStarted,          // 任务已启动
+    QueueFull             // 队列已满，无法加入
+};
+
 // HlmTaskManager 管理任务队列
 class HlmTaskManager {
    public:
     HlmTaskManager(int max_tasks);
 
-    bool addTask(shared_ptr<HlmTask> task, const string& streamUrl, const string& method);
+    HlmTaskAddStatus addTask(shared_ptr<HlmTask> task, const string& streamUrl, const string& method);
     bool removeTask(const string& streamUrl, const string& method);
     void taskCompleted(shared_ptr<HlmTask> task, const string& task_key);
 
