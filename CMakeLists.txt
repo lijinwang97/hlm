@@ -26,8 +26,8 @@ add_executable(hlm
     trunk/src/app/hlm_http_server.cc
     trunk/src/core/hlm_task.cc
     trunk/src/core/hlm_screenshot_strategy.cc
-    # trunk/src/core/hlm_decoder.cc
-    # trunk/src/core/hlm_encoder.cc
+    trunk/src/core/hlm_decoder.cc
+    trunk/src/core/hlm_encoder.cc
     trunk/src/utils/hlm_logger.cc
     trunk/src/utils/hlm_config.cc
 )
