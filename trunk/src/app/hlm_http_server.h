@@ -23,7 +23,10 @@ class HlmHttpServer {
    private:
     void initRoutes();
 
-    response handleScreenshot(const request& req);
+    response manageScreenshotReq(const request& req);
+    response startScreenshot(const json::rvalue& body);
+    response stopScreenshot(const json::rvalue& body);
+
     response handleRecording(const request& req);
     response handleMix(const request& req);
 
@@ -31,6 +34,8 @@ class HlmHttpServer {
     response logWrapper(const request& req, function<response(const request&)> handler);
 
     response createJsonResponse(int code, const string& message);
+    bool validateJson(const json::rvalue& body, const vector<string>& required_fields, map<string, string>& error_map);
+    string getOrDefault(const json::rvalue& body, const string& field, const string& default_value);
 
    private:
     HlmTaskManager task_manager_;

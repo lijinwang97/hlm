@@ -14,7 +14,7 @@ HlmHttpServer::HlmHttpServer(int max_tasks) : task_manager_(max_tasks) {
 void HlmHttpServer::initRoutes() {
     CROW_ROUTE(app_, "/screenshot").methods(HTTPMethod::Post)([this](const request& req) {
         return logWrapper(req, [this](const request& req) {
-            return handleScreenshot(req);
+            return manageScreenshotReq(req);
         });
     });
 
@@ -40,35 +40,69 @@ void HlmHttpServer::setLogLevel(LogLevel level) {
     app_.loglevel(level);
 }
 
-response HlmHttpServer::handleScreenshot(const request& req) {
+response HlmHttpServer::manageScreenshotReq(const request& req) {
     auto body = json::load(req.body);
     if (!body) {
         return createJsonResponse(INVALID_JSON, "Invalid JSON");
     }
 
-    if (!body.has("stream_url")) {
-        return createJsonResponse(INVALID_REQUEST, "Missing stream_url");
+    std::map<std::string, std::string> errors;
+    std::vector<std::string> required_fields = {"stream_url", "method", "action"};
+    if (!validateJson(body, required_fields, errors)) {
+        return createJsonResponse(INVALID_REQUEST, "Missing fields: " + errors.begin()->second);
     }
 
-    string streamUrl = body["stream_url"].s();
-    string outputDir = body.has("output_dir") ? body["output_dir"].s() : streamUrl.substr(streamUrl.find_last_of('/') + 1);
-    string filenamePrefix = body.has("filename_prefix") ? body["filename_prefix"].s() : string("snapshot");
-
-    if (!body.has("method")) {
-        return createJsonResponse(INVALID_REQUEST, "Missing method");
+    string action = body["action"].s();
+    if (action == HlmTaskAction::Start) {
+        return startScreenshot(body);
+    } else if (action == HlmTaskAction::Stop) {
+        return stopScreenshot(body);
+    } else {
+        return createJsonResponse(INVALID_REQUEST, "Invalid action. Valid actions are 'start' or 'stop'.");
     }
+}
+
+response HlmHttpServer::startScreenshot(const json::rvalue& body) {
+    string stream_url = body["stream_url"].s();
     string method = body["method"].s();
+    string output_dir = getOrDefault(body, "output_dir", stream_url.substr(stream_url.find_last_of('/') + 1));
+    string filename_prefix = getOrDefault(body, "filename_prefix", "snapshot");
+
+    // 按时间间隔截图(interval)方式：支持实时流和文件
+    // 立即截图(immediate)方式：只支持实时流
+    // 按百分比截图(percentage)和指定时间点截图(specific_time)方式：只支持文件
+    bool isRtmpStream = (stream_url.find("rtmp://") == 0);
+    if (method == HlmScreenshotMethod::Percentage || method == HlmScreenshotMethod::SpecificTime) {
+        if (isRtmpStream) {
+            return createJsonResponse(INVALID_REQUEST, "Percentage and specific time screenshot are not supported for streams.");
+        }
+    } else if (method == HlmScreenshotMethod::Immediate) {
+        if (!isRtmpStream) {
+            return createJsonResponse(INVALID_REQUEST, "Immediate screenshot is only supported for streams.");
+        }
+    }
 
     try {
         auto strategy = HlmScreenshotStrategyFactory::createStrategy(method);
-        auto task = strategy->createTask(streamUrl, outputDir, filenamePrefix, body);
-        if (task_manager_.addTask(task)) {
+        auto task = strategy->createTask(stream_url, method, output_dir, filename_prefix, body);
+        if (task_manager_.addTask(task, stream_url, method)) {
             return createJsonResponse(SUCCESS, "Screenshot task started");
         } else {
             return createJsonResponse(QUEUED, "Task queued, waiting for execution");
         }
     } catch (const invalid_argument& e) {
         return createJsonResponse(INVALID_REQUEST, e.what());
+    }
+}
+
+response HlmHttpServer::stopScreenshot(const json::rvalue& body) {
+    string stream_url = body["stream_url"].s();
+    string method = body["method"].s();
+
+    if (task_manager_.removeTask(stream_url, method)) {
+        return createJsonResponse(SUCCESS, "Screenshot task stopped successfully.");
+    } else {
+        return createJsonResponse(INVALID_REQUEST, "No running screenshot task found for this stream.");
     }
 }
 
@@ -115,4 +149,17 @@ response HlmHttpServer::createJsonResponse(int code, const string& message) {
     jsonResp["code"] = code;
     jsonResp["message"] = message;
     return response(jsonResp);
+}
+
+bool HlmHttpServer::validateJson(const json::rvalue& body, const vector<string>& required_fields, map<string, string>& error_map) {
+    for (const auto& field : required_fields) {
+        if (!body.has(field)) {
+            error_map[field] = "Missing " + field;
+        }
+    }
+    return error_map.empty();
+}
+
+string HlmHttpServer::getOrDefault(const json::rvalue& body, const string& field, const string& default_value) {
+    return body.has(field) ? body[field].s() : default_value;
 }
