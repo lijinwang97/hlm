@@ -4,7 +4,8 @@
 
 #include "utils/hlm_logger.h"
 
-HlmTask::HlmTask(TaskType type, const std::string& stream_url, const std::string& method) : type_(type), stream_url_(stream_url), method_(method) {}
+HlmTask::HlmTask(TaskType type, const std::string& stream_url, const std::string& method)
+    : type_(type), stream_url_(stream_url), method_(method) {}
 
 HlmTask::TaskType HlmTask::getType() const { return type_; }
 
@@ -12,43 +13,58 @@ const std::string& HlmTask::getStreamUrl() const { return stream_url_; }
 
 const std::string& HlmTask::getMethod() const { return method_; }
 
-HlmScreenshotTask::HlmScreenshotTask(const string& stream_url, const string& method, const string& outputDir, const string& filenamePrefix, int interval)
-    : HlmTask(TaskType::Screenshot, stream_url, method), output_dir_(outputDir), filename_prefix_(filenamePrefix), interval_(interval) {}
+HlmScreenshotTask::HlmScreenshotTask(const string& stream_url, const string& method)
+    : HlmTask(TaskType::Screenshot, stream_url, method) {}
 
 void HlmScreenshotTask::execute() {
-    hlm_info("Executing Screenshot Task (interval) with URL: {} and interval: {} seconds.", getStreamUrl(), interval_);
+    if (!executor_) {
+        executor_ = createExecutor();
+    }
+    executor_->execute();
 }
 
-HlmPercentageScreenshotTask::HlmPercentageScreenshotTask(const string& stream_url, const string& method, const string& outputDir, const string& filenamePrefix, int percentage)
-    : HlmTask(TaskType::Screenshot, stream_url, method), output_dir_(outputDir), filename_prefix_(filenamePrefix), percentage_(percentage) {}
-
-void HlmPercentageScreenshotTask::execute() {
-    hlm_info("Executing Screenshot Task (percentage) with URL: {} and percentage: {}%.", getStreamUrl(), percentage_);
+HlmIntervalScreenshotTask::HlmIntervalScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int interval)
+    : HlmScreenshotTask(stream_url, method), output_dir_(output_dir), filename_prefix_(filename_prefix), interval_(interval) {
 }
 
-HlmImmediateScreenshotTask::HlmImmediateScreenshotTask(const string& stream_url, const string& method, const string& outputDir, const string& filenamePrefix)
-    : HlmTask(TaskType::Screenshot, stream_url, method), output_dir_(outputDir), filename_prefix_(filenamePrefix) {}
-
-void HlmImmediateScreenshotTask::execute() {
-    hlm_info("Executing Immediate Screenshot Task with URL: {}.", getStreamUrl());
+unique_ptr<ScreenshotExecutor> HlmIntervalScreenshotTask::createExecutor() {
+    return make_unique<HlmIntervalScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, interval_);
 }
 
-HlmSpecificTimeScreenshotTask::HlmSpecificTimeScreenshotTask(const string& stream_url, const string& method, const string& outputDir, const string& filenamePrefix, int timeSecond)
-    : HlmTask(TaskType::Screenshot, stream_url, method), output_dir_(outputDir), filename_prefix_(filenamePrefix), timeSecond_(timeSecond) {}
+HlmPercentageScreenshotTask::HlmPercentageScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int percentage)
+    : HlmScreenshotTask(stream_url, method), output_dir_(output_dir), filename_prefix_(filename_prefix), percentage_(percentage) {
+}
 
-void HlmSpecificTimeScreenshotTask::execute() {
-    hlm_info("Executing Specific Time Screenshot Task with URL: {}. at time: {} seconds.", getStreamUrl(), timeSecond_);
+unique_ptr<ScreenshotExecutor> HlmPercentageScreenshotTask::createExecutor() {
+    return make_unique<HlmPercentageScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, percentage_);
+}
+
+HlmImmediateScreenshotTask::HlmImmediateScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix)
+    : HlmScreenshotTask(stream_url, method), output_dir_(output_dir), filename_prefix_(filename_prefix) {
+}
+
+unique_ptr<ScreenshotExecutor> HlmImmediateScreenshotTask::createExecutor() {
+    return make_unique<HlmImmediateScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_);
+}
+
+HlmSpecificTimeScreenshotTask::HlmSpecificTimeScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int time_second)
+    : HlmScreenshotTask(stream_url, method), output_dir_(output_dir), filename_prefix_(filename_prefix), time_second_(time_second) {
+    executor_ = make_unique<HlmSpecificTimeScreenshotExecutor>(stream_url, output_dir, filename_prefix, time_second);
+}
+
+unique_ptr<ScreenshotExecutor> HlmSpecificTimeScreenshotTask::createExecutor() {
+    return make_unique<HlmSpecificTimeScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, time_second_);
 }
 
 HlmRecordingTask::HlmRecordingTask(const string& stream_url, const string& outputPath, int duration)
-    : HlmTask(TaskType::Recording, stream_url, ""), stream_url_(stream_url), outputPath_(outputPath), duration_(duration) {}
+    : HlmTask(TaskType::Recording, stream_url, ""), stream_url_(stream_url), duration_(duration) {}
 
 void HlmRecordingTask::execute() {
     cout << "Executing Recording HlmTask with URL: " << stream_url_ << " and duration: " << duration_ << "\n";
 }
 
 HlmMixingTask::HlmMixingTask(const string& input1, const string& input2, const string& output)
-    : HlmTask(TaskType::Mixing, "stream_url", "method"), input1_(input1), input2_(input2), output_(output) {}
+    : HlmTask(TaskType::Mixing, "stream_url", "method"), input1_(input1), input2_(input2) {}
 
 void HlmMixingTask::execute() {
     cout << "Executing Mixing HlmTask with input1: " << input1_ << " and input2: " << input2_ << "\n";

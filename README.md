@@ -1,5 +1,22 @@
 # hlm
-## 模块化架构
+## 开始
+1. 克隆项目并下载Git LFS 储存的文件
+```
+git clone git@github.com:lijinwang97/hlm.git
+cd hlm && sudo apt-get update && sudo apt-get install git git-lfs
+git lfs install && git lfs pull
+```
+2. 编译可执行文件
+```
+mkdir build && cd build
+cmake .. && make
+```
+3. 执行
+```
+./hlm ../trunk/conf/config.toml
+```
+
+## 模块化架构(后续会更新)
 1. 项目分为几个独立的模块，每个模块负责不同的功能。目前模块包括：输入模块、处理模块、输出模块、控制模块。
 2. 每个模块的功能暂时拟定如下，后续会持续迭代升级。
 ### 输入模块

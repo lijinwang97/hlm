@@ -28,6 +28,7 @@ class Logger {
 
     static void init(LogLevel level = LogLevel::Info,
                      OutputTarget target = OutputTarget::Both,
+                     const std::string& dir = ".",
                      const std::string& base_name = "logs",
                      bool useAsync = false,
                      std::size_t maxFileSize = 104857600,  // 100 MB

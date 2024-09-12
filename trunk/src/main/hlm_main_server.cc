@@ -10,7 +10,7 @@ using namespace spdlog;
 
 void init(const std::string& config_file) {
   CONF.load(config_file);
-  Logger::init(CONF.getLogLevel(), CONF.getLogTarget(), CONF.getLogBaseName(),
+  Logger::init(CONF.getLogLevel(), CONF.getLogTarget(),CONF.getLogDir(), CONF.getLogBaseName(),
                CONF.useAsyncLogging(), CONF.getLogMaxFileSize(), CONF.getLogMaxFiles());
   CONF.printAllConfigs();
 }

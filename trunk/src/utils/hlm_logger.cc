@@ -11,6 +11,7 @@ std::shared_ptr<spdlog::logger> Logger::logger = nullptr;
 
 void Logger::init(LogLevel level,
                   OutputTarget target,
+                  const std::string& dir,
                   const std::string& base_name,
                   bool useAsync,
                   std::size_t maxFileSize,
@@ -21,7 +22,7 @@ void Logger::init(LogLevel level,
     }
 
     if (target == OutputTarget::File || target == OutputTarget::Both) {
-        std::string logFileName = generateLogFileName(base_name);
+        std::string logFileName = dir + "/" + generateLogFileName(base_name);
         sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFileName, maxFileSize, maxFiles));
     }
 

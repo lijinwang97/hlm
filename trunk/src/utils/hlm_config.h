@@ -20,6 +20,7 @@ struct TaskConfig {
 struct LoggerConfig {
     std::string level;
     std::string target;
+    std::string dir;
     std::string base_name;
     bool use_async;
     std::size_t max_file_size;
@@ -61,6 +62,7 @@ class Config {
     // Logger Config Accessors
     Logger::LogLevel getLogLevel() const { return parseLogLevel(logger_config.level); }
     Logger::OutputTarget getLogTarget() const { return parseOutputTarget(logger_config.target); }
+    const std::string& getLogDir() const { return logger_config.dir; }
     const std::string& getLogBaseName() const { return logger_config.base_name; }
     bool useAsyncLogging() const { return logger_config.use_async; }
     std::size_t getLogMaxFileSize() const { return logger_config.max_file_size * 1024 * 1024; }

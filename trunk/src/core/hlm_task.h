@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "hlm_screenshot_executor.h"
+
 using namespace std;
 
 // 基类 HlmTask
@@ -20,7 +22,7 @@ class HlmTask {
                           Recording,
                           Mixing };
 
-    HlmTask(TaskType type , const std::string& stream_url, const std::string& method);
+    HlmTask(TaskType type, const std::string& stream_url, const string& method);
     virtual ~HlmTask() = default;
 
     TaskType getType() const;
@@ -35,12 +37,26 @@ class HlmTask {
     std::string method_;
 };
 
-// 按时间间隔截图
+// 处理截图任务的基类 HlmScreenshotTask
 class HlmScreenshotTask : public HlmTask {
    public:
-    HlmScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int interval);
+    HlmScreenshotTask(const string& stream_url, const string& method);
 
     void execute() override;
+
+   protected:
+    virtual unique_ptr<ScreenshotExecutor> createExecutor() = 0;
+
+    unique_ptr<ScreenshotExecutor> executor_;
+};
+
+// 按时间间隔截图
+class HlmIntervalScreenshotTask : public HlmScreenshotTask {
+   public:
+    HlmIntervalScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int interval);
+
+   protected:
+    unique_ptr<ScreenshotExecutor> createExecutor() override;
 
    private:
     string output_dir_;
@@ -49,11 +65,12 @@ class HlmScreenshotTask : public HlmTask {
 };
 
 // 按百分比截图
-class HlmPercentageScreenshotTask : public HlmTask {
+class HlmPercentageScreenshotTask : public HlmScreenshotTask {
    public:
-    HlmPercentageScreenshotTask(const string& stream_url,const string& method, const string& output_dir, const string& filename_prefix, int percentage);
+    HlmPercentageScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int percentage);
 
-    void execute() override;
+   protected:
+    unique_ptr<ScreenshotExecutor> createExecutor() override;
 
    private:
     string output_dir_;
@@ -62,11 +79,12 @@ class HlmPercentageScreenshotTask : public HlmTask {
 };
 
 // 立即截图
-class HlmImmediateScreenshotTask : public HlmTask {
+class HlmImmediateScreenshotTask : public HlmScreenshotTask {
    public:
-    HlmImmediateScreenshotTask(const string& stream_url, const string& method,const string& output_dir, const string& filename_prefix);
+    HlmImmediateScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix);
 
-    void execute() override;
+   protected:
+    unique_ptr<ScreenshotExecutor> createExecutor() override;
 
    private:
     string output_dir_;
@@ -74,16 +92,17 @@ class HlmImmediateScreenshotTask : public HlmTask {
 };
 
 // 指定时间点截图
-class HlmSpecificTimeScreenshotTask : public HlmTask {
+class HlmSpecificTimeScreenshotTask : public HlmScreenshotTask {
    public:
-    HlmSpecificTimeScreenshotTask(const string& stream_url,const string& method, const string& output_dir, const string& filename_prefix, int timeSecond);
+    HlmSpecificTimeScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int time_second);
 
-    void execute() override;
+   protected:
+    unique_ptr<ScreenshotExecutor> createExecutor() override;
 
    private:
     string output_dir_;
     string filename_prefix_;
-    int timeSecond_;
+    int time_second_;
 };
 
 // 录像任务
@@ -95,7 +114,6 @@ class HlmRecordingTask : public HlmTask {
 
    private:
     string stream_url_;
-    string outputPath_;
     int duration_;
 };
 
@@ -109,19 +127,18 @@ class HlmMixingTask : public HlmTask {
    private:
     string input1_;
     string input2_;
-    string output_;
 };
 
 namespace HlmTaskAction {
-    const string Start = "start";
-    const string Stop = "stop";
-}
+const string Start = "start";
+const string Stop = "stop";
+}  // namespace HlmTaskAction
 
 enum class HlmTaskAddStatus {
-    TaskAlreadyRunning,   // 已有相同任务在执行
-    TaskQueued,           // 任务已加入队列
-    TaskStarted,          // 任务已启动
-    QueueFull             // 队列已满，无法加入
+    TaskAlreadyRunning,  // 已有相同任务在执行
+    TaskQueued,          // 任务已加入队列
+    TaskStarted,         // 任务已启动
+    QueueFull            // 队列已满，无法加入
 };
 
 // HlmTaskManager 管理任务队列

@@ -35,7 +35,8 @@ void Config::load(const std::string& config_file) {
         auto& logger_cfg = *config["logger"].as_table();
         logger_config.level = logger_cfg["level"].value_or("INFO");
         logger_config.target = logger_cfg["target"].value_or("console");
-        logger_config.base_name = logger_cfg["base_name"].value_or("log");
+        logger_config.dir = logger_cfg["dir"].value_or("./logs");
+        logger_config.base_name = logger_cfg["base_name"].value_or("hlm");
         logger_config.use_async = logger_cfg["use_async"].value_or(true);
         logger_config.max_file_size = logger_cfg["max_file_size"].value_or(100);
         logger_config.max_files = logger_cfg["max_files"].value_or(5);
@@ -87,8 +88,8 @@ void Config::printAllConfigs() const {
     hlm_info("Task Configurations: Max Tasks: {}", task_config.max_tasks);
 
     // 打印日志配置
-    hlm_info("Logger Configurations: Level: {}, Target: {}, Base Name: {}, Use Async: {}, Max File Size: {}, Max Files: {}",
-             logger_config.level, logger_config.target, logger_config.base_name, logger_config.use_async,
+    hlm_info("Logger Configurations: Level: {}, Target: {}, Dir: {}, Base Name: {}, Use Async: {}, Max File Size: {}, Max Files: {}",
+             logger_config.level, logger_config.target, logger_config.dir, logger_config.base_name, logger_config.use_async,
              logger_config.max_file_size, logger_config.max_files);
 
     // 打印视频配置

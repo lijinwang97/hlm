@@ -7,7 +7,7 @@ shared_ptr<HlmTask> HlmIntervalScreenshotStrategy::createTask(const string& stre
     if (interval <= 0) {
         throw invalid_argument("Interval must be positive.");
     }
-    return make_shared<HlmScreenshotTask>(stream_url, method, output_dir, filename_prefix, interval);
+    return make_shared<HlmIntervalScreenshotTask>(stream_url, method, output_dir, filename_prefix, interval);
 }
 
 shared_ptr<HlmTask> HlmPercentageScreenshotStrategy::createTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, const json::rvalue& body) {
