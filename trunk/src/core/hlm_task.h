@@ -5,11 +5,11 @@
 #include <iostream>
 #include <memory>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <thread>
 #include <unordered_map>
 #include <vector>
+#include <deque>
 
 #include "hlm_screenshot_executor.h"
 
@@ -28,13 +28,17 @@ class HlmTask {
     TaskType getType() const;
     const std::string& getStreamUrl() const;
     const std::string& getMethod() const;
+    void setCancelled(bool cancelled);
+    bool isCancelled() const;
 
     virtual void execute() = 0;
+    virtual void stop() = 0;
 
    private:
     TaskType type_;
     std::string stream_url_;
     std::string method_;
+    bool cancelled_;
 };
 
 // 处理截图任务的基类 HlmScreenshotTask
@@ -43,6 +47,7 @@ class HlmScreenshotTask : public HlmTask {
     HlmScreenshotTask(const string& stream_url, const string& method);
 
     void execute() override;
+    void stop() override;
 
    protected:
     virtual unique_ptr<ScreenshotExecutor> createExecutor() = 0;
@@ -152,9 +157,10 @@ class HlmTaskManager {
 
    private:
     void executeTask(shared_ptr<HlmTask> task, const string& task_key);
+    void stopTask(shared_ptr<HlmTask> task);
     string createTaskKey(const string& streamUrl, const string& method);
 
-    queue<shared_ptr<HlmTask>> task_queue_;
+    deque<shared_ptr<HlmTask>> task_queue_;
     vector<shared_ptr<HlmTask>> active_tasks_;
     unordered_map<string, bool> active_task_keys_;
 

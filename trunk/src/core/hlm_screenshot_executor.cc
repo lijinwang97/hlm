@@ -30,6 +30,10 @@ void HlmIntervalScreenshotExecutor::execute() {
     }
 }
 
+void HlmIntervalScreenshotExecutor::stop() {
+    running_ = false;
+}
+
 // 按百分比截图的实现
 HlmPercentageScreenshotExecutor::HlmPercentageScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int percentage)
     : ScreenshotExecutor(stream_url, output_dir, filename_prefix), percentage_(percentage) {}
@@ -38,6 +42,10 @@ void HlmPercentageScreenshotExecutor::execute() {
     initScreenshotEnvironment();
     hlm_info("Capturing frame for {}% of the stream.", percentage_);
     saveFrameAsImage(0);  // 示例
+}
+
+void HlmPercentageScreenshotExecutor::stop() {
+    hlm_info("Percentage screenshot task doesn't need explicit stop.");
 }
 
 // 立即截图的实现
@@ -50,6 +58,11 @@ void HlmImmediateScreenshotExecutor::execute() {
     saveFrameAsImage(0);
 }
 
+void HlmImmediateScreenshotExecutor::stop() {
+    // 立即截图没有执行中的停止需求
+    hlm_info("Immediate screenshot task doesn't need explicit stop.");
+}
+
 // 指定时间点截图的实现
 HlmSpecificTimeScreenshotExecutor::HlmSpecificTimeScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int time_second)
     : ScreenshotExecutor(stream_url, output_dir, filename_prefix), time_second_(time_second) {}
@@ -58,4 +71,9 @@ void HlmSpecificTimeScreenshotExecutor::execute() {
     initScreenshotEnvironment();
     hlm_info("Capturing frame at {} seconds from stream: {}", time_second_, stream_url_);
     saveFrameAsImage(0);
+}
+
+void HlmSpecificTimeScreenshotExecutor::stop() {
+    // 没有执行中的停止需求
+    hlm_info("Specific time screenshot task doesn't need explicit stop.");
 }
