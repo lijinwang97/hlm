@@ -9,7 +9,7 @@ port = 6088
 max_tasks = 3
 
 [logger]
-level = "INFO"      # 日志级别：INFO、WARN、ERROR、DEBUG
+level = "DEBUG"      # 日志级别：INFO、WARN、ERROR、DEBUG
 target = "both"     # 控制台输出：console，文件输出：file，两者兼顾：both
 dir = "./logs"  # 日志保存的路径
 base_name = "hlm"   # 日志前缀名，如：hlm_20240822_194845.log

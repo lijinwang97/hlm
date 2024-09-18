@@ -66,7 +66,7 @@ response HlmHttpServer::startScreenshot(const json::rvalue& body) {
     string stream_url = body["stream_url"].s();
     string method = body["method"].s();
     string output_dir = getOrDefault(body, "output_dir", stream_url.substr(stream_url.find_last_of('/') + 1));
-    string filename_prefix = getOrDefault(body, "filename_prefix", "snapshot");
+    string filename_prefix = getOrDefault(body, "filename_prefix", stream_url.substr(stream_url.find_last_of('/') + 1));
 
     // 按时间间隔截图(interval)方式：支持实时流和文件
     // 立即截图(immediate)方式：只支持实时流

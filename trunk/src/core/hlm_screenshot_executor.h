@@ -1,70 +1,90 @@
 #ifndef HLM_SCREENSHOT_EXECUTOR_H
 #define HLM_SCREENSHOT_EXECUTOR_H
 
-#include <string>
 #include <chrono>
+#include <string>
 #include <thread>
+
+#include "hlm_decoder.h"
+#include "hlm_encoder.h"
 
 using namespace std;
 
 // 通用的 ScreenshotExecutor 基类
 class ScreenshotExecutor {
-public:
+   public:
     ScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix);
-    virtual ~ScreenshotExecutor() = default;
+    virtual ~ScreenshotExecutor();
 
-    virtual void execute() = 0;
-    virtual void stop() = 0;
+    virtual void checkAndSavePacket(AVPacket* encoded_packet) = 0;
 
-protected:
+    void execute();
+    void stop();
+
+   protected:
+    void initScreenshot();
+    bool processScreenshotFrames();
+    void saveFrameAsImage(AVPacket* encoded_packet);
+
+   private:
+    bool ensureDirectoryExists(const std::string& dir_path);
+    bool openInputStream();
+    bool findVideoStream();
+    bool initDecoder();
+    bool initEncoder();
+    bool initScaler();
+
+   protected:
     string stream_url_;
     string output_dir_;
     string filename_prefix_;
+    bool running_ = false;
+    int frame_count_ = 0;
 
-    void initScreenshotEnvironment();
-    void saveFrameAsImage(int frame_number);
+    AVFormatContext* format_context_ = nullptr;
+    HlmDecoder* decoder_ = nullptr;
+    HlmEncoder* encoder_ = nullptr;
+    AVPacket* encoded_packet_ = nullptr;
+    AVFrame* scaled_frame_ = nullptr;
+    int video_stream_index_ = -1;
 };
 
 // 按时间间隔截图
 class HlmIntervalScreenshotExecutor : public ScreenshotExecutor {
-public:
+   public:
     HlmIntervalScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int interval);
-    void execute() override;
-    void stop() override;
+    void checkAndSavePacket(AVPacket* encoded_packet) override;
 
-private:
+   private:
     int interval_;
-    bool running_ = true;
+    int64_t last_saved_timestamp_ = 0;
 };
 
 // 按百分比截图
 class HlmPercentageScreenshotExecutor : public ScreenshotExecutor {
-public:
+   public:
     HlmPercentageScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int percentage);
-    void execute() override;
-    void stop() override;
+    void checkAndSavePacket(AVPacket* encoded_packet) override;
 
-private:
+   private:
     int percentage_;
 };
 
 // 立即截图
 class HlmImmediateScreenshotExecutor : public ScreenshotExecutor {
-public:
+   public:
     HlmImmediateScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix);
-    void execute() override;
-    void stop() override;
+    void checkAndSavePacket(AVPacket* encoded_packet) override;
 };
 
 // 指定时间点截图
 class HlmSpecificTimeScreenshotExecutor : public ScreenshotExecutor {
-public:
+   public:
     HlmSpecificTimeScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int time_second);
-    void execute() override;
-    void stop() override;
+    void checkAndSavePacket(AVPacket* encoded_packet) override;
 
-private:
+   private:
     int time_second_;
 };
 
-#endif // HLM_SCREENSHOT_EXECUTOR_H
+#endif  // HLM_SCREENSHOT_EXECUTOR_H

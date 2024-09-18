@@ -35,14 +35,25 @@ bool HlmEncoder::initEncoder(AVFormatContext* format_context, AVCodecContext* de
         return false;
     }
 
-    ecodec_context_->bit_rate = CONF.getVideoBitrate() * 1000;
-    ecodec_context_->width = CONF.getWidth();
-    ecodec_context_->height = CONF.getHeight();
-    ecodec_context_->pix_fmt = decoder_context->pix_fmt;
-    ecodec_context_->sample_fmt = decoder_context->sample_fmt;
-    ecodec_context_->sample_rate = decoder_context->sample_rate;
-    ecodec_context_->channel_layout = decoder_context->channel_layout;
-    ecodec_context_->channels = decoder_context->channels;
+    if (codec_name == "png") {
+        ecodec_context_->pix_fmt = AV_PIX_FMT_RGB24;
+    } else {
+        ecodec_context_->pix_fmt = decoder_context->pix_fmt;
+    }
+
+    if (codec->type == AVMEDIA_TYPE_VIDEO && codec_name != "png") {
+        ecodec_context_->bit_rate = decoder_context->bit_rate;
+    }
+
+    ecodec_context_->width = decoder_context->width;
+    ecodec_context_->height = decoder_context->height;
+
+    if (codec->type == AVMEDIA_TYPE_AUDIO) {
+        ecodec_context_->sample_fmt = decoder_context->sample_fmt;
+        ecodec_context_->sample_rate = decoder_context->sample_rate;
+        ecodec_context_->channel_layout = decoder_context->channel_layout;
+        ecodec_context_->channels = decoder_context->channels;
+    }
 
     AVRational framerate = decoder_context->framerate;
     if (framerate.num == 0 || framerate.den == 0) {
@@ -53,8 +64,6 @@ bool HlmEncoder::initEncoder(AVFormatContext* format_context, AVCodecContext* de
 
     if (codec->type == AVMEDIA_TYPE_VIDEO) {
         media_type_ = "video";
-        ecodec_context_->gop_size = 100;
-        ecodec_context_->max_b_frames = 0;
     } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
         media_type_ = "audio";
     }
@@ -100,8 +109,21 @@ bool HlmEncoder::encodeFrame(AVFrame* frame, AVPacket* pkt) {
         return false;
     }
 
-    while (avcodec_receive_packet(ecodec_context_, pkt) == 0) {
+    // while (avcodec_receive_packet(ecodec_context_, pkt) == 0) {
+    //     return true;
+    // }
+
+    int ret = avcodec_receive_packet(ecodec_context_, pkt);
+    if (ret == 0) {
         return true;
+    } else if (ret == AVERROR(EAGAIN)) {
+        hlm_error("Encoder needs more input frames before it can output a packet.");
+    } else if (ret == AVERROR_EOF) {
+        hlm_info("Encoder reached the end of stream.");
+    } else {
+        char errbuf[AV_ERROR_MAX_STRING_SIZE];
+        av_strerror(ret, errbuf, sizeof(errbuf));
+        hlm_error("Error receiving packet from encoder: {}", errbuf);
     }
 
     return false;
@@ -144,6 +166,28 @@ AVFrame* HlmEncoder::scaleFrame(AVFrame* frame) {
     if (!sws_ctx_) {
         hlm_error("Scaler context not initialized.");
         return nullptr;
+    }
+
+    if (!scaled_frame_ || scaled_frame_->width != ecodec_context_->width || scaled_frame_->height != ecodec_context_->height || scaled_frame_->format != AV_PIX_FMT_RGB24) {
+        if (scaled_frame_) {
+            av_frame_free(&scaled_frame_);
+        }
+
+        scaled_frame_ = av_frame_alloc();
+        if (!scaled_frame_) {
+            hlm_error("Failed to allocate scaled frame.");
+            return nullptr;
+        }
+
+        scaled_frame_->width = ecodec_context_->width;
+        scaled_frame_->height = ecodec_context_->height;
+        scaled_frame_->format = AV_PIX_FMT_RGB24;
+
+        if (av_frame_get_buffer(scaled_frame_, 32) < 0) {
+            hlm_error("Failed to allocate buffer for scaled frame.");
+            av_frame_free(&scaled_frame_);
+            return nullptr;
+        }
     }
 
     sws_scale(sws_ctx_, frame->data, frame->linesize, 0, frame->height,
