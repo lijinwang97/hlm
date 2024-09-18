@@ -22,7 +22,7 @@ class ScreenshotExecutor {
     void stop();
 
    protected:
-    void initScreenshot();
+    bool initScreenshot();
     bool processScreenshotFrames();
     void saveFrameAsImage(AVPacket* encoded_packet);
 
@@ -33,6 +33,8 @@ class ScreenshotExecutor {
     bool initDecoder();
     bool initEncoder();
     bool initScaler();
+
+    static int interruptCallback(void* ctx);
 
    protected:
     string stream_url_;
@@ -45,8 +47,11 @@ class ScreenshotExecutor {
     HlmDecoder* decoder_ = nullptr;
     HlmEncoder* encoder_ = nullptr;
     AVPacket* encoded_packet_ = nullptr;
-    AVFrame* scaled_frame_ = nullptr;
     int video_stream_index_ = -1;
+
+    int64_t start_time_ = 0;
+    int64_t last_checked_time_ = 0;
+    int64_t timeout_ = 3000000;  // 回调超时时间：3s
 };
 
 // 按时间间隔截图

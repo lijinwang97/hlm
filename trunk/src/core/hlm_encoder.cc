@@ -19,6 +19,7 @@ HlmEncoder::~HlmEncoder() {
     }
     if (scaled_frame_) {
         av_frame_free(&scaled_frame_);
+        scaled_frame_ = nullptr; 
     }
 }
 
@@ -166,28 +167,6 @@ AVFrame* HlmEncoder::scaleFrame(AVFrame* frame) {
     if (!sws_ctx_) {
         hlm_error("Scaler context not initialized.");
         return nullptr;
-    }
-
-    if (!scaled_frame_ || scaled_frame_->width != ecodec_context_->width || scaled_frame_->height != ecodec_context_->height || scaled_frame_->format != AV_PIX_FMT_RGB24) {
-        if (scaled_frame_) {
-            av_frame_free(&scaled_frame_);
-        }
-
-        scaled_frame_ = av_frame_alloc();
-        if (!scaled_frame_) {
-            hlm_error("Failed to allocate scaled frame.");
-            return nullptr;
-        }
-
-        scaled_frame_->width = ecodec_context_->width;
-        scaled_frame_->height = ecodec_context_->height;
-        scaled_frame_->format = AV_PIX_FMT_RGB24;
-
-        if (av_frame_get_buffer(scaled_frame_, 32) < 0) {
-            hlm_error("Failed to allocate buffer for scaled frame.");
-            av_frame_free(&scaled_frame_);
-            return nullptr;
-        }
     }
 
     sws_scale(sws_ctx_, frame->data, frame->linesize, 0, frame->height,
