@@ -12,8 +12,8 @@ int64_t getCurrentTimeInMicroseconds() {
 }
 
 // 通用 ScreenshotExecutor 基类的实现
-ScreenshotExecutor::ScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix)
-    : stream_url_(stream_url), output_dir_(output_dir), filename_prefix_(filename_prefix) {
+ScreenshotExecutor::ScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, const string& screenshot_method)
+    : stream_url_(stream_url), output_dir_(output_dir), filename_prefix_(filename_prefix), screenshot_method_(screenshot_method) {
     encoded_packet_ = av_packet_alloc();
 }
 
@@ -52,7 +52,10 @@ void ScreenshotExecutor::execute() {
 
 void ScreenshotExecutor::stop() {
     running_ = false;
-    hlm_info("Stopping screenshot capture for stream: {}", stream_url_);
+}
+
+bool ScreenshotExecutor::isRunning() const {
+    return running_;
 }
 
 bool ScreenshotExecutor::initScreenshot() {
@@ -88,15 +91,19 @@ bool ScreenshotExecutor::initScreenshot() {
 }
 
 bool ScreenshotExecutor::processScreenshotFrames() {
-    AVPacket packet;
+    AVPacket* packet = av_packet_alloc();
     AVFrame* frame = av_frame_alloc();
 
-    while (running_ && av_read_frame(format_context_, &packet) >= 0) {
-        start_time_ = getCurrentTimeInMicroseconds();
+    while (running_ && av_read_frame(format_context_, packet) >= 0) {
+        updateStartTime();
+        if (packet->stream_index == video_stream_index_) {
+            if (decoder_->decodePacket(packet, frame)) {
+                int64_t pts = frame->pts;
+                double frame_time = pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
+                hlm_debug("Processing {} screenshot. PTS: {}, time: {}s, key frame: {}", screenshot_method_, pts, frame_time, frame->key_frame);
 
-        if (packet.stream_index == video_stream_index_) {
-            if (decoder_->decodePacket(&packet, frame)) {
                 AVFrame* scaled_frame = encoder_->scaleFrame(frame);
+
                 if (!scaled_frame) {
                     hlm_error("Failed to scale frame for saving.");
                     continue;
@@ -111,10 +118,11 @@ bool ScreenshotExecutor::processScreenshotFrames() {
                 }
             }
         }
-        av_packet_unref(&packet);
+        av_packet_unref(packet);
     }
 
     av_frame_free(&frame);
+    av_packet_free(&packet);
     return true;
 }
 
@@ -149,15 +157,14 @@ bool ScreenshotExecutor::ensureDirectoryExists(const string& dir_path) {
 }
 
 bool ScreenshotExecutor::openInputStream() {
-    start_time_ = getCurrentTimeInMicroseconds();
-
     format_context_ = avformat_alloc_context();
     if (!format_context_) {
         hlm_error("Failed to allocate AVFormatContext.");
         return false;
     }
 
-    // 设置超时回调，用于处理流异常及读取到流最后一个音视频包进行自动退出
+    // 设置超时回调，用于处理流异常及读取到流结束进行自动退出
+    updateStartTime();
     AVIOInterruptCB interrupt_cb = {interruptCallback, this};
     format_context_->interrupt_callback = interrupt_cb;
 
@@ -165,7 +172,7 @@ bool ScreenshotExecutor::openInputStream() {
         hlm_error("Failed to open stream: {}", stream_url_);
         return false;
     }
-    start_time_ = getCurrentTimeInMicroseconds();
+    updateStartTime();
 
     if (avformat_find_stream_info(format_context_, nullptr) < 0) {
         hlm_error("Failed to retrieve stream info for: {}", stream_url_);
@@ -195,7 +202,7 @@ bool ScreenshotExecutor::initDecoder() {
 
 bool ScreenshotExecutor::initEncoder() {
     encoder_ = new HlmEncoder();
-    if (!encoder_->initEncoder(format_context_, decoder_->getContext(), "png")) {
+    if (!encoder_->initEncoderForImage(decoder_->getContext(), "png")) {
         hlm_error("Failed to initialize encoder.");
         return false;
     }
@@ -220,12 +227,12 @@ int ScreenshotExecutor::interruptCallback(void* ctx) {
     int64_t current_time = getCurrentTimeInMicroseconds();
     int64_t elapsed_time = current_time - executor->last_checked_time_;
 
-    if (elapsed_time > 1000000) {
+    if (elapsed_time > CHECK_INTERVAL) {
         executor->last_checked_time_ = current_time;
         int64_t total_elapsed_time = current_time - executor->start_time_;
-        hlm_info("Interrupt callback invoked: Total elapsed time: {}µs, Start time: {}µs, Current time: {}µs",
-                 total_elapsed_time, executor->start_time_, current_time);
-        if (total_elapsed_time > executor->timeout_) {
+        hlm_debug("Interrupt callback invoked: Total elapsed time: {}µs, Start time: {}µs, Current time: {}µs",
+                  total_elapsed_time, executor->start_time_, current_time);
+        if (total_elapsed_time > TIMEOUT) {
             hlm_error("Timeout reached for stream: {}", executor->stream_url_);
             return 1;
         }
@@ -234,16 +241,17 @@ int ScreenshotExecutor::interruptCallback(void* ctx) {
     return 0;
 }
 
+void ScreenshotExecutor::updateStartTime() {
+    start_time_ = getCurrentTimeInMicroseconds();
+}
+
 // 按时间间隔截图的实现
-HlmIntervalScreenshotExecutor::HlmIntervalScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int interval)
-    : ScreenshotExecutor(stream_url, output_dir, filename_prefix), interval_(interval) {}
+HlmIntervalScreenshotExecutor::HlmIntervalScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int interval, const string& screenshot_method)
+    : ScreenshotExecutor(stream_url, output_dir, filename_prefix, screenshot_method), interval_(interval) {}
 
 void HlmIntervalScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
-    int64_t pts = encoded_packet->pts;
-    double frame_time = pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
-
-    hlm_debug("Encoded frame. PTS: {}, frame time: {}s, last saved time: {}s",
-              pts, frame_time, last_saved_timestamp_);
+    double frame_time = encoded_packet->pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
+    hlm_debug("Frame time: {}s, last saved time: {}s, interval: {}s", frame_time, last_saved_timestamp_, interval_);
 
     if (frame_time - last_saved_timestamp_ >= interval_) {
         saveFrameAsImage(encoded_packet);
@@ -253,22 +261,45 @@ void HlmIntervalScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet)
 }
 
 // 按百分比截图的实现
-HlmPercentageScreenshotExecutor::HlmPercentageScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int percentage)
-    : ScreenshotExecutor(stream_url, output_dir, filename_prefix), percentage_(percentage) {}
+HlmPercentageScreenshotExecutor::HlmPercentageScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int percentage, const string& screenshot_method)
+    : ScreenshotExecutor(stream_url, output_dir, filename_prefix, screenshot_method), percentage_(percentage), last_saved_percentage_(0) {}
 
 void HlmPercentageScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
+    double frame_time = encoded_packet->pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
+    double total_duration = format_context_->duration / AV_TIME_BASE;
+    double current_percentage = (frame_time / total_duration) * 100;
+
+    hlm_debug("Current percentage: {}%, last saved percentage: {}%, target percentage: {}%", current_percentage, last_saved_percentage_, percentage_);
+
+    if (current_percentage - last_saved_percentage_ >= percentage_) {
+        saveFrameAsImage(encoded_packet);
+        last_saved_percentage_ = current_percentage;
+        hlm_info("Saving frame at percentage: {}% (interval: {}%).", current_percentage, percentage_);
+    }
 }
 
 // 立即截图的实现
-HlmImmediateScreenshotExecutor::HlmImmediateScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix)
-    : ScreenshotExecutor(stream_url, output_dir, filename_prefix) {}
+HlmImmediateScreenshotExecutor::HlmImmediateScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, const string& screenshot_method)
+    : ScreenshotExecutor(stream_url, output_dir, filename_prefix, screenshot_method) {}
 
 void HlmImmediateScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
+    saveFrameAsImage(encoded_packet);
+    hlm_info("Saving frame at immediate.");
+    stop();
 }
 
 // 指定时间点截图的实现
-HlmSpecificTimeScreenshotExecutor::HlmSpecificTimeScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int time_second)
-    : ScreenshotExecutor(stream_url, output_dir, filename_prefix), time_second_(time_second) {}
+HlmSpecificTimeScreenshotExecutor::HlmSpecificTimeScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int time_second, const string& screenshot_method)
+    : ScreenshotExecutor(stream_url, output_dir, filename_prefix, screenshot_method), time_second_(time_second) {}
 
 void HlmSpecificTimeScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
+    double frame_time = encoded_packet->pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
+
+    hlm_debug("Frame time: {}s, target time: {}s", frame_time, time_second_);
+
+    if (frame_time >= time_second_) {
+        saveFrameAsImage(encoded_packet);
+        hlm_info("Saving frame at time: {}s (target time: {}s).", frame_time, time_second_);
+        stop();
+    }
 }

@@ -10,13 +10,6 @@
 using namespace crow;
 using namespace std;
 
-namespace HlmScreenshotMethod {
-    const string Interval = "interval";
-    const string Percentage = "percentage";
-    const string Immediate = "immediate";
-    const string SpecificTime = "specific_time";
-}
-
 // 策略基类 HlmScreenshotStrategy
 class HlmScreenshotStrategy {
    public:

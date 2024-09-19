@@ -28,7 +28,7 @@ void HlmScreenshotTask::execute() {
 }
 
 void HlmScreenshotTask::stop() {
-    if (executor_) {
+    if (executor_ && executor_->isRunning()) {
         executor_->stop();
     }
 }
@@ -38,7 +38,7 @@ HlmIntervalScreenshotTask::HlmIntervalScreenshotTask(const string& stream_url, c
 }
 
 unique_ptr<ScreenshotExecutor> HlmIntervalScreenshotTask::createExecutor() {
-    return make_unique<HlmIntervalScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, interval_);
+    return make_unique<HlmIntervalScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, interval_, HlmScreenshotMethod::Interval);
 }
 
 HlmPercentageScreenshotTask::HlmPercentageScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int percentage)
@@ -46,7 +46,7 @@ HlmPercentageScreenshotTask::HlmPercentageScreenshotTask(const string& stream_ur
 }
 
 unique_ptr<ScreenshotExecutor> HlmPercentageScreenshotTask::createExecutor() {
-    return make_unique<HlmPercentageScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, percentage_);
+    return make_unique<HlmPercentageScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, percentage_, HlmScreenshotMethod::Percentage);
 }
 
 HlmImmediateScreenshotTask::HlmImmediateScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix)
@@ -54,16 +54,15 @@ HlmImmediateScreenshotTask::HlmImmediateScreenshotTask(const string& stream_url,
 }
 
 unique_ptr<ScreenshotExecutor> HlmImmediateScreenshotTask::createExecutor() {
-    return make_unique<HlmImmediateScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_);
+    return make_unique<HlmImmediateScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, HlmScreenshotMethod::Immediate);
 }
 
 HlmSpecificTimeScreenshotTask::HlmSpecificTimeScreenshotTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, int time_second)
     : HlmScreenshotTask(stream_url, method), output_dir_(output_dir), filename_prefix_(filename_prefix), time_second_(time_second) {
-    executor_ = make_unique<HlmSpecificTimeScreenshotExecutor>(stream_url, output_dir, filename_prefix, time_second);
 }
 
 unique_ptr<ScreenshotExecutor> HlmSpecificTimeScreenshotTask::createExecutor() {
-    return make_unique<HlmSpecificTimeScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, time_second_);
+    return make_unique<HlmSpecificTimeScreenshotExecutor>(getStreamUrl(), output_dir_, filename_prefix_, time_second_, HlmScreenshotMethod::SpecificTime);
 }
 
 HlmRecordingTask::HlmRecordingTask(const string& stream_url, const string& outputPath, int duration)

@@ -19,11 +19,11 @@ HlmEncoder::~HlmEncoder() {
     }
     if (scaled_frame_) {
         av_frame_free(&scaled_frame_);
-        scaled_frame_ = nullptr; 
+        scaled_frame_ = nullptr;
     }
 }
 
-bool HlmEncoder::initEncoder(AVFormatContext* format_context, AVCodecContext* decoder_context, const std::string& codec_name) {
+bool HlmEncoder::initEncoderForImage(AVCodecContext* decoder_context, const std::string& codec_name) {
     const AVCodec* codec = codec_name.empty() ? avcodec_find_encoder(decoder_context->codec_id) : avcodec_find_encoder_by_name(codec_name.c_str());
     if (!codec) {
         hlm_error("Failed to find encoder. codec_name:{}", codec_name);
@@ -36,41 +36,10 @@ bool HlmEncoder::initEncoder(AVFormatContext* format_context, AVCodecContext* de
         return false;
     }
 
-    if (codec_name == "png") {
-        ecodec_context_->pix_fmt = AV_PIX_FMT_RGB24;
-    } else {
-        ecodec_context_->pix_fmt = decoder_context->pix_fmt;
-    }
-
-    if (codec->type == AVMEDIA_TYPE_VIDEO && codec_name != "png") {
-        ecodec_context_->bit_rate = decoder_context->bit_rate;
-    }
-
+    ecodec_context_->pix_fmt = AV_PIX_FMT_RGB24;
+    ecodec_context_->time_base = (AVRational){1, 1};
     ecodec_context_->width = decoder_context->width;
     ecodec_context_->height = decoder_context->height;
-
-    if (codec->type == AVMEDIA_TYPE_AUDIO) {
-        ecodec_context_->sample_fmt = decoder_context->sample_fmt;
-        ecodec_context_->sample_rate = decoder_context->sample_rate;
-        ecodec_context_->channel_layout = decoder_context->channel_layout;
-        ecodec_context_->channels = decoder_context->channels;
-    }
-
-    AVRational framerate = decoder_context->framerate;
-    if (framerate.num == 0 || framerate.den == 0) {
-        framerate = AVRational{25, 1};
-    }
-    ecodec_context_->time_base = av_inv_q(framerate);
-    ecodec_context_->framerate = framerate;
-
-    if (codec->type == AVMEDIA_TYPE_VIDEO) {
-        media_type_ = "video";
-    } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-        media_type_ = "audio";
-    }
-
-    ecodec_context_->thread_count = 16;
-    ecodec_context_->thread_type = codec->type == AVMEDIA_TYPE_VIDEO ? FF_THREAD_FRAME : FF_THREAD_SLICE;
 
     if (avcodec_open2(ecodec_context_, codec, nullptr) < 0) {
         hlm_error("Failed to open encoder.");
@@ -78,30 +47,7 @@ bool HlmEncoder::initEncoder(AVFormatContext* format_context, AVCodecContext* de
         return false;
     }
 
-    stream_ = avformat_new_stream(format_context, nullptr);
-    if (!stream_) {
-        hlm_error("Failed to create new stream.");
-        avcodec_free_context(&ecodec_context_);
-        return false;
-    }
-
-    stream_->time_base = ecodec_context_->time_base;
-    if (avcodec_parameters_from_context(stream_->codecpar, ecodec_context_) < 0) {
-        hlm_error("Failed to copy codec parameters to stream.");
-        avcodec_free_context(&ecodec_context_);
-        return false;
-    }
-
-    if (codec->type == AVMEDIA_TYPE_VIDEO) {
-        hlm_info("video encoder init succ. stream info: \nIndex:{} \nCodec:{} \nWidth:{} \nHeight:{} \nBit rate:{} \nTime base:{}/{} \nFrame rate:{} \nGOP size:{} \nMax B frames:{} \nPixel format:{}\n",
-                 stream_->index, avcodec_get_name(ecodec_context_->codec_id), ecodec_context_->width, ecodec_context_->height, ecodec_context_->bit_rate,
-                 ecodec_context_->time_base.num, ecodec_context_->time_base.den, ecodec_context_->framerate.num, ecodec_context_->framerate.den, ecodec_context_->gop_size,
-                 ecodec_context_->max_b_frames, av_get_pix_fmt_name(ecodec_context_->pix_fmt));
-    } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-        hlm_info("audio encoder init succ. stream info \nIndex:{} \nCodec:{} \nSample rate:{} \nChannels:{} \nChannel layout:{} \nBit rate:{} \nTime base:{}/{} \nSample format:{}\n",
-                 stream_->index, avcodec_get_name(ecodec_context_->codec_id), ecodec_context_->sample_rate, ecodec_context_->channels, ecodec_context_->channel_layout,
-                 ecodec_context_->bit_rate, ecodec_context_->time_base.num, ecodec_context_->time_base.den, av_get_sample_fmt_name(ecodec_context_->sample_fmt));
-    }
+    hlm_info("PNG encoder initialized successfully.");
     return true;
 }
 

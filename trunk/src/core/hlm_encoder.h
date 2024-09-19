@@ -17,7 +17,7 @@ class HlmEncoder {
     HlmEncoder();
     ~HlmEncoder();
 
-    bool initEncoder(AVFormatContext* format_context, AVCodecContext* decoder_context, const std::string& codec_name = "");
+    bool initEncoderForImage(AVCodecContext* decoder_context, const std::string& codec_name = "");
     bool encodeFrame(AVFrame* frame, AVPacket* pkt);
     AVCodecContext* getContext() const;
 
@@ -28,7 +28,6 @@ class HlmEncoder {
    private:
     AVCodecContext* ecodec_context_;
     AVStream* stream_;
-    std::string media_type_;
 
     struct SwsContext* sws_ctx_;
     AVFrame* scaled_frame_;

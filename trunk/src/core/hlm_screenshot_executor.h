@@ -2,6 +2,7 @@
 #define HLM_SCREENSHOT_EXECUTOR_H
 
 #include <chrono>
+#include <mutex>
 #include <string>
 #include <thread>
 
@@ -13,13 +14,14 @@ using namespace std;
 // 通用的 ScreenshotExecutor 基类
 class ScreenshotExecutor {
    public:
-    ScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix);
+    ScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, const string& screenshot_method);
     virtual ~ScreenshotExecutor();
 
     virtual void checkAndSavePacket(AVPacket* encoded_packet) = 0;
 
     void execute();
     void stop();
+    bool isRunning() const;
 
    protected:
     bool initScreenshot();
@@ -35,11 +37,13 @@ class ScreenshotExecutor {
     bool initScaler();
 
     static int interruptCallback(void* ctx);
+    void updateStartTime();
 
    protected:
     string stream_url_;
     string output_dir_;
     string filename_prefix_;
+    string screenshot_method_;
     bool running_ = false;
     int frame_count_ = 0;
 
@@ -51,13 +55,14 @@ class ScreenshotExecutor {
 
     int64_t start_time_ = 0;
     int64_t last_checked_time_ = 0;
-    int64_t timeout_ = 3000000;  // 回调超时时间：3s
+    static const int64_t CHECK_INTERVAL = 1000000;  // 1秒检查间隔
+    static const int64_t TIMEOUT = 3000000;        // 超时3秒
 };
 
 // 按时间间隔截图
 class HlmIntervalScreenshotExecutor : public ScreenshotExecutor {
    public:
-    HlmIntervalScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int interval);
+    HlmIntervalScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int interval, const string& screenshot_method);
     void checkAndSavePacket(AVPacket* encoded_packet) override;
 
    private:
@@ -68,24 +73,25 @@ class HlmIntervalScreenshotExecutor : public ScreenshotExecutor {
 // 按百分比截图
 class HlmPercentageScreenshotExecutor : public ScreenshotExecutor {
    public:
-    HlmPercentageScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int percentage);
+    HlmPercentageScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int percentage, const string& screenshot_method);
     void checkAndSavePacket(AVPacket* encoded_packet) override;
 
    private:
     int percentage_;
+    double last_saved_percentage_;
 };
 
 // 立即截图
 class HlmImmediateScreenshotExecutor : public ScreenshotExecutor {
    public:
-    HlmImmediateScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix);
+    HlmImmediateScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, const string& screenshot_method);
     void checkAndSavePacket(AVPacket* encoded_packet) override;
 };
 
 // 指定时间点截图
 class HlmSpecificTimeScreenshotExecutor : public ScreenshotExecutor {
    public:
-    HlmSpecificTimeScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int time_second);
+    HlmSpecificTimeScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, int time_second, const string& screenshot_method);
     void checkAndSavePacket(AVPacket* encoded_packet) override;
 
    private:

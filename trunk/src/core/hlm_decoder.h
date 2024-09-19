@@ -11,7 +11,7 @@ extern "C" {
 
 #include "utils/hlm_logger.h"
 
-using namespace spdlog;
+using namespace std;
 
 class HlmDecoder {
    public:

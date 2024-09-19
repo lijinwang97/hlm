@@ -42,13 +42,7 @@ bool HlmDecoder::initDecoder(AVFormatContext* format_context) {
         return false;
     }
 
-    if (codec->type == AVMEDIA_TYPE_VIDEO) {
-        media_type_ = "video";
-    } else if (codec->type == AVMEDIA_TYPE_AUDIO) {
-        media_type_ = "audio";
-    }
-
-    hlm_info("{} decoder initialized successfully for stream index: {}", media_type_, stream_index_);
+    hlm_info("Decoder initialized successfully for stream index: {}", stream_index_);
     return true;
 }
 
