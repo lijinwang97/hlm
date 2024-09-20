@@ -1,6 +1,5 @@
 #include "hlm_screenshot_strategy.h"
-
-#include "hlm_task.h"
+#include "hlm_screenshot_task.h"
 
 shared_ptr<HlmTask> HlmIntervalScreenshotStrategy::createTask(const string& stream_url, const string& method, const string& output_dir, const string& filename_prefix, const json::rvalue& body) {
     int interval = body["interval"].i();

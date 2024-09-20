@@ -3,7 +3,10 @@
 #include <iostream>
 #include <string>
 
+#include "core/hlm_recording_strategy.h"
+#include "core/hlm_recording_task.h"
 #include "core/hlm_screenshot_strategy.h"
+#include "core/hlm_screenshot_task.h"
 #include "utils/hlm_logger.h"
 
 HlmHttpServer::HlmHttpServer(int max_tasks) : task_manager_(max_tasks) {
@@ -18,7 +21,7 @@ void HlmHttpServer::initRoutes() {
         });
     });
 
-    CROW_ROUTE(app_, "/record").methods(HTTPMethod::Post)([this](const request& req) {
+    CROW_ROUTE(app_, "/recording").methods(HTTPMethod::Post)([this](const request& req) {
         return logWrapper(req, [this](const request& req) {
             return manageRecordingReq(req);
         });
@@ -117,16 +120,67 @@ response HlmHttpServer::stopScreenshot(const json::rvalue& body) {
 response HlmHttpServer::manageRecordingReq(const request& req) {
     auto body = json::load(req.body);
     if (!body) {
-        return response(400, "Invalid JSON");
+        return createJsonResponse(INVALID_JSON, "Invalid JSON");
     }
 
-    int duration = body["duration"].i();
-    string output_file = body["output_file"].s();
+    std::map<std::string, std::string> errors;
+    std::vector<std::string> required_fields = {"stream_url", "method", "action"};
+    if (!validateJson(body, required_fields, errors)) {
+        return createJsonResponse(INVALID_REQUEST, "Missing fields: " + errors.begin()->second);
+    }
 
-    hlm_info("manageRecordingReq duration:{} output_file:{} output:{}", duration, output_file);
-    // start_recording(output_file, duration);
+    string action = body["action"].s();
+    if (action == HlmTaskAction::Start) {
+        return startRecording(body);
+    } else if (action == HlmTaskAction::Stop) {
+        return stopRecording(body);
+    } else {
+        return createJsonResponse(INVALID_REQUEST, "Invalid action. Valid actions are 'start' or 'stop'.");
+    }
+}
 
-    return response(200, "Recording started!");
+response HlmHttpServer::startRecording(const json::rvalue& body) {
+    string stream_url = body["stream_url"].s();
+    string method = body["method"].s();
+    string output_dir = getOrDefault(body, "output_dir", stream_url.substr(stream_url.find_last_of('/') + 1));
+    string filename_prefix = getOrDefault(body, "filename_name", stream_url.substr(stream_url.find_last_of('/') + 1));
+
+    // 录制成HLS和MP4：只支持实时流
+    bool isRtmpStream = (stream_url.find("rtmp://") == 0);
+    if (!isRtmpStream) {
+        return createJsonResponse(INVALID_REQUEST, "Recording is only supported for streams.");
+    }
+
+    try {
+        auto strategy = HlmRecordingStrategyFactory::createStrategy(method);
+        auto task = strategy->createTask(stream_url, method, output_dir, filename_prefix, body);
+        HlmTaskAddStatus status = task_manager_.addTask(task, stream_url, method);
+        switch (status) {
+            case HlmTaskAddStatus::TaskAlreadyRunning:
+                return createJsonResponse(INVALID_REQUEST, "A recording task with the same stream URL and method is already running.");
+            case HlmTaskAddStatus::TaskQueued:
+                return createJsonResponse(QUEUED, "Task queued, waiting for execution.");
+            case HlmTaskAddStatus::TaskStarted:
+                return createJsonResponse(SUCCESS, "Recording task started.");
+            case HlmTaskAddStatus::QueueFull:
+                return createJsonResponse(INVALID_REQUEST, "Task queue is full, unable to add task.");
+        }
+    } catch (const invalid_argument& e) {
+        return createJsonResponse(INVALID_REQUEST, e.what());
+    }
+
+    return createJsonResponse(SUCCESS, "Recording started successfully");
+}
+
+response HlmHttpServer::stopRecording(const json::rvalue& body) {
+    string stream_url = body["stream_url"].s();
+    string method = body["method"].s();
+
+    if (task_manager_.removeTask(stream_url, method)) {
+        return createJsonResponse(SUCCESS, "Recording task stopped successfully.");
+    } else {
+        return createJsonResponse(INVALID_REQUEST, "No running recording task found for this stream.");
+    }
 }
 
 response HlmHttpServer::manageMixReq(const request& req) {
