@@ -7,10 +7,7 @@
 #include <string>
 
 
-namespace HlmRecordingMethod {
-const string Hls = "hls";
-const string Mp4 = "mp4";
-}  // namespace HlmRecordingMethod
+
 
 // 录像任务
 class HlmRecordingTask : public HlmTask {

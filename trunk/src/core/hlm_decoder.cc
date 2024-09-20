@@ -42,7 +42,6 @@ bool HlmDecoder::initDecoder(AVFormatContext* format_context) {
         return false;
     }
 
-    hlm_info("Decoder initialized successfully for stream index: {}", stream_index_);
     return true;
 }
 

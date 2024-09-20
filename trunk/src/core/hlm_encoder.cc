@@ -6,7 +6,7 @@
 using namespace spdlog;
 
 HlmEncoder::HlmEncoder()
-    : ecodec_context_(nullptr), stream_(nullptr) {
+    : ecodec_context_(nullptr), stream_(nullptr), sws_ctx_(nullptr), scaled_frame_(nullptr) {
 }
 
 HlmEncoder::~HlmEncoder() {
@@ -16,7 +16,9 @@ HlmEncoder::~HlmEncoder() {
 
     if (sws_ctx_) {
         sws_freeContext(sws_ctx_);
+        sws_ctx_ = nullptr;
     }
+
     if (scaled_frame_) {
         av_frame_free(&scaled_frame_);
         scaled_frame_ = nullptr;
@@ -48,6 +50,62 @@ bool HlmEncoder::initEncoderForImage(AVCodecContext* decoder_context, const std:
     }
 
     hlm_info("PNG encoder initialized successfully.");
+    return true;
+}
+
+bool HlmEncoder::initEncoderForVideo(AVCodecContext* decoder_context) {
+    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+    if (!codec) {
+        hlm_error("Failed to find encoder. codec_name:{}", codec->name);
+        return false;
+    }
+
+    ecodec_context_ = avcodec_alloc_context3(codec);
+    if (!ecodec_context_) {
+        hlm_error("Failed to allocate video encoder context.");
+        return false;
+    }
+
+    ecodec_context_->width = decoder_context->width;
+    ecodec_context_->height = decoder_context->height;
+    ecodec_context_->pix_fmt = decoder_context->pix_fmt;
+    ecodec_context_->bit_rate = decoder_context->bit_rate;
+    ecodec_context_->time_base = (AVRational){1, 25};
+
+    if (avcodec_open2(ecodec_context_, codec, nullptr) < 0) {
+        hlm_error("Failed to open video encoder.");
+        return false;
+    }
+
+    hlm_info("Video encoder initialized successfully with codec: {}", codec->name);
+    return true;
+}
+
+bool HlmEncoder::initEncoderForAudio(AVCodecContext* decoder_context) {
+    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+    if (!codec) {
+        hlm_error("Failed to find audio encoder.");
+        return false;
+    }
+
+    ecodec_context_ = avcodec_alloc_context3(codec);
+    if (!ecodec_context_) {
+        hlm_error("Failed to allocate audio encoder context.");
+        return false;
+    }
+
+    ecodec_context_->sample_rate = decoder_context->sample_rate;
+    ecodec_context_->channels = decoder_context->channels;
+    ecodec_context_->channel_layout = decoder_context->channel_layout;
+    ecodec_context_->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : decoder_context->sample_fmt;
+    ecodec_context_->bit_rate = decoder_context->bit_rate;
+
+    if (avcodec_open2(ecodec_context_, codec, nullptr) < 0) {
+        hlm_error("Failed to open audio encoder.");
+        return false;
+    }
+
+    hlm_info("Audio encoder initialized successfully with codec: {}", codec->name);
     return true;
 }
 

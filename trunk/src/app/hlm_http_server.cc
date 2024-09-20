@@ -143,7 +143,11 @@ response HlmHttpServer::startRecording(const json::rvalue& body) {
     string stream_url = body["stream_url"].s();
     string method = body["method"].s();
     string output_dir = getOrDefault(body, "output_dir", stream_url.substr(stream_url.find_last_of('/') + 1));
-    string filename_prefix = getOrDefault(body, "filename_name", stream_url.substr(stream_url.find_last_of('/') + 1));
+    string filename = body["filename_name"].s();
+
+    if (!(filename.size() >= 4 && (filename.substr(filename.size() - 4) == ".mp4" || filename.substr(filename.size() - 4) == ".hls"))) {
+        return createJsonResponse(INVALID_REQUEST, "Filename must end with .mp4 or .hls.");
+    }
 
     // 录制成HLS和MP4：只支持实时流
     bool isRtmpStream = (stream_url.find("rtmp://") == 0);
@@ -153,7 +157,7 @@ response HlmHttpServer::startRecording(const json::rvalue& body) {
 
     try {
         auto strategy = HlmRecordingStrategyFactory::createStrategy(method);
-        auto task = strategy->createTask(stream_url, method, output_dir, filename_prefix, body);
+        auto task = strategy->createTask(stream_url, method, output_dir, filename, body);
         HlmTaskAddStatus status = task_manager_.addTask(task, stream_url, method);
         switch (status) {
             case HlmTaskAddStatus::TaskAlreadyRunning:

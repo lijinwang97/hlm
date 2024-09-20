@@ -6,13 +6,6 @@
 #include <memory>
 #include <string>
 
-namespace HlmScreenshotMethod {
-const string Interval = "interval";
-const string Percentage = "percentage";
-const string Immediate = "immediate";
-const string SpecificTime = "specific_time";
-}  // namespace HlmScreenshotMethod
-
 // 处理截图任务的基类 HlmScreenshotTask
 class HlmScreenshotTask : public HlmTask {
    public:

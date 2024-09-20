@@ -7,18 +7,18 @@
 
 // 通用 HlmScreenshotExecutor 基类的实现
 HlmScreenshotExecutor::HlmScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, const string& screenshot_method)
-    : HlmExecutor(stream_url, output_dir, filename_prefix, screenshot_method), screenshot_method_(screenshot_method) {
+    : HlmExecutor(stream_url, output_dir, filename_prefix, screenshot_method, MediaType::Screenshot), screenshot_method_(screenshot_method) {
 }
 
 void HlmScreenshotExecutor::processFrames(AVFrame* frame) {
-    AVFrame* scaled_frame = encoder_->scaleFrame(frame);
+    AVFrame* scaled_frame = video_encoder_->scaleFrame(frame);
     if (!scaled_frame) {
         hlm_error("Failed to scale frame for saving.");
         return;
     }
 
     encoded_packet_ = av_packet_alloc();
-    if (encoder_->encodeFrame(scaled_frame, encoded_packet_)) {
+    if (video_encoder_->encodeFrame(scaled_frame, encoded_packet_)) {
         checkAndSavePacket(encoded_packet_);
         av_packet_unref(encoded_packet_);
     } else {
@@ -46,7 +46,7 @@ HlmIntervalScreenshotExecutor::HlmIntervalScreenshotExecutor(const string& strea
     : HlmScreenshotExecutor(stream_url, output_dir, filename_prefix, screenshot_method), interval_(interval) {}
 
 void HlmIntervalScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
-    double frame_time = encoded_packet->pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
+    double frame_time = encoded_packet->pts * av_q2d(input_format_context_->streams[video_stream_index_]->time_base);
     hlm_debug("Frame time: {}s, last saved time: {}s, interval: {}s", frame_time, last_saved_timestamp_, interval_);
 
     if (frame_time - last_saved_timestamp_ >= interval_) {
@@ -62,8 +62,8 @@ HlmPercentageScreenshotExecutor::HlmPercentageScreenshotExecutor(const string& s
 
 void HlmPercentageScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
     // 实际视频时长可能会小于显示视频时长，导致达不到100%而少一张图片，后续解决
-    double frame_time = encoded_packet->pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
-    double total_duration = format_context_->duration / AV_TIME_BASE;
+    double frame_time = encoded_packet->pts * av_q2d(input_format_context_->streams[video_stream_index_]->time_base);
+    double total_duration = input_format_context_->duration / AV_TIME_BASE;
     double current_percentage = (frame_time / total_duration) * 100;
     hlm_debug("Current percentage: {}%, last saved percentage: {}%, target percentage: {}%, frame_time:{}s, total_duration:{}",
               current_percentage, last_saved_percentage_, percentage_, frame_time, total_duration);
@@ -90,7 +90,7 @@ HlmSpecificTimeScreenshotExecutor::HlmSpecificTimeScreenshotExecutor(const strin
     : HlmScreenshotExecutor(stream_url, output_dir, filename_prefix, screenshot_method), time_second_(time_second) {}
 
 void HlmSpecificTimeScreenshotExecutor::checkAndSavePacket(AVPacket* encoded_packet) {
-    double frame_time = encoded_packet->pts * av_q2d(format_context_->streams[video_stream_index_]->time_base);
+    double frame_time = encoded_packet->pts * av_q2d(input_format_context_->streams[video_stream_index_]->time_base);
     hlm_debug("Frame time: {}s, target time: {}s", frame_time, time_second_);
 
     if (frame_time >= time_second_) {

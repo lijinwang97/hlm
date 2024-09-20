@@ -7,6 +7,7 @@ extern "C" {
 #include <libavutil/pixdesc.h>
 #include <libavutil/pixfmt.h>
 #include <libswscale/swscale.h>
+#include <libavutil/channel_layout.h>
 }
 
 #include <memory>
@@ -18,6 +19,8 @@ class HlmEncoder {
     ~HlmEncoder();
 
     bool initEncoderForImage(AVCodecContext* decoder_context, const std::string& codec_name = "");
+    bool initEncoderForVideo(AVCodecContext* decoder_context);
+    bool initEncoderForAudio(AVCodecContext* decoder_context);
     bool encodeFrame(AVFrame* frame, AVPacket* pkt);
     AVCodecContext* getContext() const;
 
