@@ -2,11 +2,7 @@
 #include "hlm_recording_task.h"
 
 shared_ptr<HlmTask> HlmMp4RecordingStrategy::createTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, const json::rvalue& body) {
-    int duration = body["duration"].i();
-    if (duration < 0) {
-        throw invalid_argument("Duration must be positive.");
-    }
-    return make_shared<HlmMp4RecordingTask>(stream_url, method, output_dir, filename, duration);
+    return make_shared<HlmMp4RecordingTask>(stream_url, method, output_dir, filename);
 }
 
 shared_ptr<HlmTask> HlmHlsRecordingStrategy::createTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, const json::rvalue& body) {

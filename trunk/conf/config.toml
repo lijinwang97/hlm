@@ -5,10 +5,10 @@ port = 6088
 max_tasks = 3
 
 [logger]
-level = "DEBUG"     # 日志级别：INFO、WARN、ERROR、DEBUG
+level = "INFO"     # 日志级别：INFO、WARN、ERROR、DEBUG
 target = "both"     # 控制台输出：console，文件输出：file，两者兼顾：both
 dir = "./logs"      # 日志保存的路径
 base_name = "hlm"   # 日志前缀名，如：hlm_20240822_194845.log
-use_async = true    # 是否异步记录日志
+use_async = false    # 是否异步记录日志
 max_file_size = 500 # 日志文件大小上限，单位：MB
 max_files = 3       # 日志文件个数上限

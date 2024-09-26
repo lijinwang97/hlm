@@ -1,12 +1,12 @@
-#ifndef THREADSAFEQUEUE_H
-#define THREADSAFEQUEUE_H
+#ifndef HLMQUEUE_H
+#define HLMQUEUE_H
 
 #include <condition_variable>
 #include <mutex>
 #include <queue>
 
 template <typename T>
-class ThreadSafeQueue {
+class HlmQueue {
    public:
     void push(T value);
     T pop();
@@ -20,14 +20,14 @@ class ThreadSafeQueue {
 };
 
 template <typename T>
-void ThreadSafeQueue<T>::push(T value) {
+void HlmQueue<T>::push(T value) {
     std::lock_guard<std::mutex> lock(mutex_);
     queue_.push(std::move(value));
     cond_var_.notify_one();
 }
 
 template <typename T>
-T ThreadSafeQueue<T>::pop() {
+T HlmQueue<T>::pop() {
     std::unique_lock<std::mutex> lock(mutex_);
     cond_var_.wait(lock, [this]() { return !queue_.empty(); });
     T value = std::move(queue_.front());
@@ -36,15 +36,15 @@ T ThreadSafeQueue<T>::pop() {
 }
 
 template <typename T>
-bool ThreadSafeQueue<T>::empty() const {
+bool HlmQueue<T>::empty() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return queue_.empty();
 }
 
 template <typename T>
-std::size_t ThreadSafeQueue<T>::size() const {
+std::size_t HlmQueue<T>::size() const {
     std::lock_guard<std::mutex> lock(mutex_);
     return queue_.size();
 }
 
-#endif  // THREADSAFEQUEUE_H
+#endif  // HLMQUEUE_H

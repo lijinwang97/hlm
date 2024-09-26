@@ -53,7 +53,7 @@ bool HlmEncoder::initEncoderForImage(AVCodecContext* decoder_context, const std:
     return true;
 }
 
-bool HlmEncoder::initEncoderForVideo(AVCodecContext* decoder_context) {
+bool HlmEncoder::initEncoderForVideo(AVCodecContext* decoder_context, AVFormatContext* input_format_context, AVFormatContext* output_format_context, int stream_index) {
     const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
     if (!codec) {
         hlm_error("Failed to find encoder. codec_name:{}", codec->name);
@@ -70,18 +70,34 @@ bool HlmEncoder::initEncoderForVideo(AVCodecContext* decoder_context) {
     ecodec_context_->height = decoder_context->height;
     ecodec_context_->pix_fmt = decoder_context->pix_fmt;
     ecodec_context_->bit_rate = decoder_context->bit_rate;
-    ecodec_context_->time_base = (AVRational){1, 25};
+    // ecodec_context_->time_base = (AVRational){1, 25};
+
+    AVRational input_frame_rate = av_guess_frame_rate(input_format_context, input_format_context->streams[stream_index], nullptr);
+    ecodec_context_->time_base = av_inv_q(input_frame_rate);
+    hlm_info("Input frame rate: {}/{}", input_frame_rate.num, input_frame_rate.den);
 
     if (avcodec_open2(ecodec_context_, codec, nullptr) < 0) {
         hlm_error("Failed to open video encoder.");
         return false;
     }
 
-    hlm_info("Video encoder initialized successfully with codec: {}", codec->name);
+    stream_ = avformat_new_stream(output_format_context, codec);
+    if (!stream_) {
+        hlm_error("Failed to create new video stream.");
+        return false;
+    }
+
+    if (avcodec_parameters_from_context(stream_->codecpar, ecodec_context_) < 0) {
+        hlm_error("Failed to copy video encoder parameters to stream.");
+        return false;
+    }
+    stream_index_ = stream_->index;
+
+    hlm_info("Video encoder initialized successfully with codec: {}, stream index:{}", codec->name, stream_index_);
     return true;
 }
 
-bool HlmEncoder::initEncoderForAudio(AVCodecContext* decoder_context) {
+bool HlmEncoder::initEncoderForAudio(AVCodecContext* decoder_context, AVFormatContext* output_format_context) {
     const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
     if (!codec) {
         hlm_error("Failed to find audio encoder.");
@@ -105,7 +121,19 @@ bool HlmEncoder::initEncoderForAudio(AVCodecContext* decoder_context) {
         return false;
     }
 
-    hlm_info("Audio encoder initialized successfully with codec: {}", codec->name);
+    stream_ = avformat_new_stream(output_format_context, codec);
+    if (!stream_) {
+        hlm_error("Failed to create new video stream.");
+        return false;
+    }
+
+    if (avcodec_parameters_from_context(stream_->codecpar, ecodec_context_) < 0) {
+        hlm_error("Failed to copy video encoder parameters to stream.");
+        return false;
+    }
+    stream_index_ = stream_->index;
+
+    hlm_info("Audio encoder initialized successfully with codec: {}, stream index:{}", codec->name, stream_index_);
     return true;
 }
 
@@ -113,10 +141,6 @@ bool HlmEncoder::encodeFrame(AVFrame* frame, AVPacket* pkt) {
     if (avcodec_send_frame(ecodec_context_, frame) < 0) {
         return false;
     }
-
-    // while (avcodec_receive_packet(ecodec_context_, pkt) == 0) {
-    //     return true;
-    // }
 
     int ret = avcodec_receive_packet(ecodec_context_, pkt);
     if (ret == 0) {
@@ -132,6 +156,34 @@ bool HlmEncoder::encodeFrame(AVFrame* frame, AVPacket* pkt) {
     }
 
     return false;
+}
+
+void HlmEncoder::flushEncoder(std::function<void(AVPacket*, int)> checkAndSavePacket) {
+    AVPacket* packet = av_packet_alloc();
+    int ret;
+
+    if ((ret = avcodec_send_frame(ecodec_context_, nullptr)) < 0) {
+        hlm_error("Error sending flush frame to encoder.");
+        av_packet_free(&packet);
+        return;
+    }
+
+    while (true) {
+        ret = avcodec_receive_packet(ecodec_context_, packet);
+        if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) {
+            break;
+        } else if (ret < 0) {
+            hlm_error("Error receiving packet from encoder during flush.");
+            break;
+        }
+        hlm_info("avcodec_receive_packet index: {}", stream_index_);
+
+        checkAndSavePacket(packet, stream_index_);
+        av_packet_unref(packet);
+    }
+
+    av_packet_free(&packet);
+    hlm_info("Encoder flush completed for stream index: {}", stream_index_);
 }
 
 AVCodecContext* HlmEncoder::getContext() const {

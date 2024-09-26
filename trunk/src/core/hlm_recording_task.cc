@@ -20,8 +20,8 @@ void HlmRecordingTask::stop() {
 }
 
 // MP4 录制任务实现
-HlmMp4RecordingTask::HlmMp4RecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, int duration)
-    : HlmRecordingTask(stream_url, method), output_dir_(output_dir), filename_(filename), duration_(duration) {}
+HlmMp4RecordingTask::HlmMp4RecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename)
+    : HlmRecordingTask(stream_url, method), output_dir_(output_dir), filename_(filename) {}
 
 unique_ptr<HlmRecordingExecutor> HlmMp4RecordingTask::createExecutor() {
     return make_unique<HlmMp4RecordingExecutor>(getStreamUrl(), output_dir_, filename_, HlmRecordingMethod::Mp4);

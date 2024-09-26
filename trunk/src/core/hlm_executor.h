@@ -9,6 +9,8 @@
 
 #include "hlm_decoder.h"
 #include "hlm_encoder.h"
+#include "utils/hlm_queue.h"
+#include "utils/hlm_thread.h"
 
 using namespace std;
 
@@ -36,30 +38,22 @@ class HlmExecutor {
     HlmExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& media_method, MediaType media_type);
     virtual ~HlmExecutor();
 
-    virtual void processFrames(AVFrame* frame) = 0;
+    virtual bool init() = 0;
+    virtual bool initOutputFile() = 0;
+    virtual void execute() = 0;
+    virtual void checkAndSavePacket(AVPacket* encoded_packet, int stream_index) = 0;
 
-    void execute();
     void stop();
     bool isRunning() const;
-
-   protected:
-    bool initMedia();
-
-   private:
     bool ensureDirectoryExists(const std::string& dir_path);
     bool openInputStream();
     bool findStreams();
     bool initDecoder();
-    bool initEncoder();
-    bool initVideoEncoderForImage();
-    bool initVideoEncoderForVideo();
     bool initScaler();
-    bool initOutputFile();
-    void updateStartTime();
-    bool isScreenshot();
-    bool isRecording();
-    bool isMix();
 
+    void updateStartTime();
+
+   private:
     static int interruptCallback(void* ctx);
 
    protected:
@@ -76,9 +70,13 @@ class HlmExecutor {
     HlmDecoder* audio_decoder_ = nullptr;
     HlmEncoder* video_encoder_ = nullptr;
     HlmEncoder* audio_encoder_ = nullptr;
-    AVPacket* encoded_packet_ = nullptr;
-    int video_stream_index_ = -1;
-    int audio_stream_index_ = -1;
+    int input_video_stream_index_ = -1;
+    int input_audio_stream_index_ = -1;
+    int output_video_stream_index_ = -1;
+    int output_audio_stream_index_ = -1;
+
+    HlmQueue<AVPacket*> video_queue_;
+    HlmQueue<AVPacket*> audio_queue_;
 
     int64_t start_time_ = 0;
     int64_t last_checked_time_ = 0;

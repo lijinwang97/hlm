@@ -145,8 +145,8 @@ response HlmHttpServer::startRecording(const json::rvalue& body) {
     string output_dir = getOrDefault(body, "output_dir", stream_url.substr(stream_url.find_last_of('/') + 1));
     string filename = body["filename_name"].s();
 
-    if (!(filename.size() >= 4 && (filename.substr(filename.size() - 4) == ".mp4" || filename.substr(filename.size() - 4) == ".hls"))) {
-        return createJsonResponse(INVALID_REQUEST, "Filename must end with .mp4 or .hls.");
+    if (!(filename.size() >= 4 && (filename.substr(filename.size() - 4) == ".mp4" || filename.substr(filename.size() - 5) == ".m3u8"))) {
+        return createJsonResponse(INVALID_REQUEST, "Filename must end with .mp4 or .m3u8.");
     }
 
     // 录制成HLS和MP4：只支持实时流

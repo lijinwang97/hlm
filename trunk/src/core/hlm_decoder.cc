@@ -60,3 +60,29 @@ bool HlmDecoder::decodePacket(AVPacket* pkt, AVFrame* frame) {
 AVCodecContext* HlmDecoder::getContext() const {
     return codec_context_;
 }
+
+void HlmDecoder::flushDecoder(function<void(AVFrame*, int)> processFramesCallback) {
+    AVFrame* frame = av_frame_alloc();
+    int ret;
+
+    if ((ret = avcodec_send_packet(codec_context_, nullptr)) < 0) {
+        hlm_error("Error sending flush packet to decoder.");
+        av_frame_free(&frame);
+        return;
+    }
+
+    while (true) {
+        ret = avcodec_receive_frame(codec_context_, frame);
+        if (ret == AVERROR_EOF || ret == AVERROR(EAGAIN)) {
+            break;
+        } else if (ret < 0) {
+            hlm_error("Error receiving frame from decoder during flush.");
+            break;
+        }
+
+        processFramesCallback(frame, stream_index_);
+    }
+
+    av_frame_free(&frame);
+}
+

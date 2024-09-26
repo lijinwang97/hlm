@@ -5,9 +5,11 @@ extern "C" {
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libavutil/time.h>
+#include <libavutil/opt.h>
 }
 
 #include <memory>
+#include <functional>
 
 #include "utils/hlm_logger.h"
 
@@ -21,6 +23,7 @@ class HlmDecoder {
     bool initDecoder(AVFormatContext* format_context);
     bool decodePacket(AVPacket* pkt, AVFrame* frame);
     AVCodecContext* getContext() const;
+    void flushDecoder(function<void(AVFrame*, int)> processFramesCallback);
 
    private:
     AVCodecContext* codec_context_;

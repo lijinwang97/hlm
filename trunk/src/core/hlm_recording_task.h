@@ -1,13 +1,11 @@
 #ifndef HLM_RECORDING_TASK_H
 #define HLM_RECORDING_TASK_H
 
-#include "hlm_task.h"
-#include "hlm_recording_executor.h"
 #include <memory>
 #include <string>
 
-
-
+#include "hlm_recording_executor.h"
+#include "hlm_task.h"
 
 // 录像任务
 class HlmRecordingTask : public HlmTask {
@@ -26,7 +24,7 @@ class HlmRecordingTask : public HlmTask {
 // MP4 录制任务
 class HlmMp4RecordingTask : public HlmRecordingTask {
    public:
-    HlmMp4RecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, int duration);
+    HlmMp4RecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename);
 
    protected:
     unique_ptr<HlmRecordingExecutor> createExecutor() override;
@@ -34,7 +32,6 @@ class HlmMp4RecordingTask : public HlmRecordingTask {
    private:
     string output_dir_;
     string filename_;
-    int duration_;
 };
 
 // HLS 录制任务
@@ -46,7 +43,7 @@ class HlmHlsRecordingTask : public HlmRecordingTask {
     unique_ptr<HlmRecordingExecutor> createExecutor() override;
 
    private:
-        string output_dir_;
+    string output_dir_;
     string filename_;
     int segment_duration_;
 };

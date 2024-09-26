@@ -42,6 +42,7 @@ add_executable(hlm
     trunk/src/utils/hlm_logger.cc
     trunk/src/utils/hlm_config.cc
     trunk/src/utils/hlm_time.cc
+    trunk/src/utils/hlm_thread.cc    
 )
 
 # 链接FFmpeg库

@@ -18,11 +18,14 @@ class HlmRecordingExecutor : public HlmExecutor {
     HlmRecordingExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& recording_method);
     virtual ~HlmRecordingExecutor() = default;
 
-    void processFrames(AVFrame* frame) override;
-    virtual void checkAndSavePacket(AVPacket* encoded_packet) = 0;
+    bool init() override;
+    bool initOutputFile() override;
+    void execute() override;
+
+    virtual void checkAndSavePacket(AVPacket* encoded_packet, int stream_index) = 0;
 
    protected:
-    void savePacket(AVPacket* encoded_packet);
+    void endRecording();
 
    protected:
     string recording_method_;
@@ -32,14 +35,14 @@ class HlmRecordingExecutor : public HlmExecutor {
 class HlmMp4RecordingExecutor : public HlmRecordingExecutor {
    public:
     HlmMp4RecordingExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& recording_method);
-    void checkAndSavePacket(AVPacket* encoded_packet) override;
+    void checkAndSavePacket(AVPacket* encoded_packet, int stream_index) override;
 };
 
 // 录制为HLS格式
 class HlmHlsRecordingExecutor : public HlmRecordingExecutor {
    public:
     HlmHlsRecordingExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& recording_method);
-    void checkAndSavePacket(AVPacket* encoded_packet) override;
+    void checkAndSavePacket(AVPacket* encoded_packet, int stream_index) override;
 };
 
 #endif  // HLM_RECORDING_EXECUTOR_H
