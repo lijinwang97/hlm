@@ -7,7 +7,7 @@
 
 // 通用 HlmScreenshotExecutor 基类的实现
 HlmScreenshotExecutor::HlmScreenshotExecutor(const string& stream_url, const string& output_dir, const string& filename_prefix, const string& screenshot_method)
-    : HlmExecutor(stream_url, output_dir, filename_prefix, screenshot_method, MediaType::Screenshot), screenshot_method_(screenshot_method) {
+    : HlmExecutor(stream_url, output_dir, filename_prefix, screenshot_method), screenshot_method_(screenshot_method) {
 }
 
 bool HlmScreenshotExecutor::init() {

@@ -8,6 +8,8 @@
 #include <memory>
 #include <string>
 
+using namespace std;
+
 class Logger {
    public:
     enum class LogLevel {
@@ -28,11 +30,11 @@ class Logger {
 
     static void init(LogLevel level = LogLevel::Info,
                      OutputTarget target = OutputTarget::Both,
-                     const std::string& dir = ".",
-                     const std::string& base_name = "logs",
+                     const string& dir = ".",
+                     const string& base_name = "logs",
                      bool useAsync = false,
-                     std::size_t maxFileSize = 104857600,  // 100 MB
-                     std::size_t maxFiles = 3);
+                     size_t maxFileSize = 104857600,  // 100 MB
+                     size_t maxFiles = 3);
 
     static void setLogLevel(LogLevel level);
 
@@ -67,9 +69,9 @@ class Logger {
     }
 
    private:
-    static std::shared_ptr<spdlog::logger> logger;
+    static shared_ptr<spdlog::logger> logger;
 
-    static std::string generateLogFileName(const std::string& base_name);
+    static string generateLogFileName(const string& base_name);
 };
 
 #define hlm_trace(...) Logger::TRACE(__VA_ARGS__)

@@ -12,7 +12,7 @@ Config& Config::getInstance() {
     return instance;
 }
 
-void Config::load(const std::string& config_file) {
+void Config::load(const string& config_file) {
     try {
         toml::table config = toml::parse_file(config_file);
         // 读取Http配置
@@ -33,11 +33,11 @@ void Config::load(const std::string& config_file) {
         logger_config.max_file_size = logger_cfg["max_file_size"].value_or(100);
         logger_config.max_files = logger_cfg["max_files"].value_or(5);
     } catch (const toml::parse_error& err) {
-        std::cerr << "Error parsing config file: " << err << "\n";
+        cerr << "Error parsing config file: " << err << "\n";
     }
 }
 
-Logger::LogLevel Config::parseLogLevel(const std::string& level_str) {
+Logger::LogLevel Config::parseLogLevel(const string& level_str) {
     if (level_str == "TRACE") return LogLevel::Trace;
     if (level_str == "DEBUG") return LogLevel::Debug;
     if (level_str == "INFO") return LogLevel::Info;
@@ -46,7 +46,7 @@ Logger::LogLevel Config::parseLogLevel(const std::string& level_str) {
     return LogLevel::Info;
 }
 
-Logger::OutputTarget Config::parseOutputTarget(const std::string& target_str) {
+Logger::OutputTarget Config::parseOutputTarget(const string& target_str) {
     if (target_str == "console") return OutputTarget::Console;
     if (target_str == "file") return OutputTarget::File;
     if (target_str == "both") return OutputTarget::Both;

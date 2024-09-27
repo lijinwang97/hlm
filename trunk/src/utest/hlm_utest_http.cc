@@ -11,7 +11,8 @@ using namespace spdlog;
 
 void init(const std::string& config_file) {
     CONF.load(config_file);
-    Logger::init(CONF.getLogLevel(), CONF.getLogTarget(), CONF.getLogBaseName(), CONF.useAsyncLogging(), CONF.getLogMaxFileSize(), CONF.getLogMaxFiles());
+    Logger::init(CONF.getLogLevel(), CONF.getLogTarget(), CONF.getLogDir(), CONF.getLogBaseName(),
+                 CONF.useAsyncLogging(), CONF.getLogMaxFileSize(), CONF.getLogMaxFiles());
     CONF.printAllConfigs();
 }
 
@@ -21,7 +22,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
     init(argv[1]);
-    HlmHttpServer server;
+    HlmHttpServer server(CONF.getMaxTasks());
     server.start(6088);
     return 0;
 }

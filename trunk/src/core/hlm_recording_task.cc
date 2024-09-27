@@ -28,8 +28,8 @@ unique_ptr<HlmRecordingExecutor> HlmMp4RecordingTask::createExecutor() {
 }
 
 // HLS 录制任务实现
-HlmHlsRecordingTask::HlmHlsRecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, int segment_duration)
-    : HlmRecordingTask(stream_url, method), output_dir_(output_dir), filename_(filename), segment_duration_(segment_duration) {}
+HlmHlsRecordingTask::HlmHlsRecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename)
+    : HlmRecordingTask(stream_url, method), output_dir_(output_dir), filename_(filename){}
 
 unique_ptr<HlmRecordingExecutor> HlmHlsRecordingTask::createExecutor() {
     return make_unique<HlmHlsRecordingExecutor>(getStreamUrl(), output_dir_, filename_, HlmRecordingMethod::Hls);

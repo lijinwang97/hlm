@@ -11,6 +11,8 @@
 #include <unordered_map>
 #include <vector>
 
+#include "hlm_mix_executor.h"
+
 using namespace std;
 
 // 基类 HlmTask
@@ -20,12 +22,12 @@ class HlmTask {
                           Recording,
                           Mixing };
 
-    HlmTask(TaskType type, const std::string& stream_url, const string& method);
+    HlmTask(TaskType type, const string& stream_url, const string& method);
     virtual ~HlmTask() = default;
 
     TaskType getType() const;
-    const std::string& getStreamUrl() const;
-    const std::string& getMethod() const;
+    const string& getStreamUrl() const;
+    const string& getMethod() const;
     void setCancelled(bool cancelled);
     bool isCancelled() const;
 
@@ -34,36 +36,24 @@ class HlmTask {
 
    private:
     TaskType type_;
-    std::string stream_url_;
-    std::string method_;
+    string stream_url_;
+    string method_;
     bool cancelled_;
-};
-
-
-
-
-// 混流任务
-class HlmMixingTask : public HlmTask {
-   public:
-    HlmMixingTask(const string& input1, const string& input2, const string& output);
-
-    void execute() override;
-
-   private:
-    string input1_;
-    string input2_;
 };
 
 namespace HlmTaskAction {
 const string Start = "start";
 const string Stop = "stop";
+const string Update = "update";
 }  // namespace HlmTaskAction
 
 enum class HlmTaskAddStatus {
     TaskAlreadyRunning,  // 已有相同任务在执行
     TaskQueued,          // 任务已加入队列
     TaskStarted,         // 任务已启动
-    QueueFull            // 队列已满，无法加入
+    TaskUpdated,         // 任务已更新
+    QueueFull,           // 队列已满，无法加入
+    TaskNotFound         // 任务不存在
 };
 
 // HlmTaskManager 管理任务队列
@@ -72,11 +62,13 @@ class HlmTaskManager {
     HlmTaskManager(int max_tasks);
 
     HlmTaskAddStatus addTask(shared_ptr<HlmTask> task, const string& streamUrl, const string& method);
+    HlmTaskAddStatus updateTask(const string& streamUrl, const string& method, const HlmMixTaskParams& params);
     bool removeTask(const string& streamUrl, const string& method);
     void taskCompleted(shared_ptr<HlmTask> task, const string& task_key);
 
    private:
     void executeTask(shared_ptr<HlmTask> task, const string& task_key);
+    void updateMixTask(shared_ptr<HlmTask> task, const HlmMixTaskParams& params);
     void stopTask(shared_ptr<HlmTask> task);
     string createTaskKey(const string& streamUrl, const string& method);
 

@@ -5,9 +5,11 @@
 #include <thread>
 #include <functional>
 
+using namespace std;
+
 class HlmThread {
 public:
-    HlmThread(const std::string& name, std::function<void()> process_func);
+    HlmThread(const string& name, function<void()> process_func);
 
     void start();
     void stop();
@@ -17,9 +19,9 @@ private:
     void run();
 
 private:
-    std::string thread_name_;
-    std::function<void()> process_func_;
-    std::thread thread_;
+    string thread_name_;
+    function<void()> process_func_;
+    thread thread_;
     bool running_;
 };
 

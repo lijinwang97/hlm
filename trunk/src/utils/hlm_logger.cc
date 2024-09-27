@@ -7,30 +7,30 @@
 #include <iomanip>
 #include <sstream>
 
-std::shared_ptr<spdlog::logger> Logger::logger = nullptr;
+shared_ptr<spdlog::logger> Logger::logger = nullptr;
 
 void Logger::init(LogLevel level,
                   OutputTarget target,
-                  const std::string& dir,
-                  const std::string& base_name,
+                  const string& dir,
+                  const string& base_name,
                   bool useAsync,
-                  std::size_t maxFileSize,
-                  std::size_t maxFiles) {
-    std::vector<spdlog::sink_ptr> sinks;
+                  size_t maxFileSize,
+                  size_t maxFiles) {
+    vector<spdlog::sink_ptr> sinks;
     if (target == OutputTarget::Console || target == OutputTarget::Both) {
-        sinks.push_back(std::make_shared<spdlog::sinks::stdout_color_sink_mt>());
+        sinks.push_back(make_shared<spdlog::sinks::stdout_color_sink_mt>());
     }
 
     if (target == OutputTarget::File || target == OutputTarget::Both) {
-        std::string logFileName = dir + "/" + generateLogFileName(base_name);
-        sinks.push_back(std::make_shared<spdlog::sinks::rotating_file_sink_mt>(logFileName, maxFileSize, maxFiles));
+        string logFileName = dir + "/" + generateLogFileName(base_name);
+        sinks.push_back(make_shared<spdlog::sinks::rotating_file_sink_mt>(logFileName, maxFileSize, maxFiles));
     }
 
     if (useAsync) {
         spdlog::init_thread_pool(8192, 1);
-        logger = std::make_shared<spdlog::async_logger>("logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
+        logger = make_shared<spdlog::async_logger>("logger", sinks.begin(), sinks.end(), spdlog::thread_pool(), spdlog::async_overflow_policy::block);
     } else {
-        logger = std::make_shared<spdlog::logger>("logger", sinks.begin(), sinks.end());
+        logger = make_shared<spdlog::logger>("logger", sinks.begin(), sinks.end());
     }
 
     spdlog::set_default_logger(logger);
@@ -64,14 +64,14 @@ void Logger::setLogLevel(LogLevel level) {
     }
 }
 
-std::string Logger::generateLogFileName(const std::string& base_name) {
-    auto now = std::chrono::system_clock::now();
-    std::time_t now_time = std::chrono::system_clock::to_time_t(now);
-    std::tm local_time = *std::localtime(&now_time);
+string Logger::generateLogFileName(const string& base_name) {
+    auto now = chrono::system_clock::now();
+    time_t now_time = chrono::system_clock::to_time_t(now);
+    tm local_time = *localtime(&now_time);
 
-    std::ostringstream oss;
+    ostringstream oss;
     oss << base_name << "_"
-        << std::put_time(&local_time, "%Y%m%d_%H%M%S")
+        << put_time(&local_time, "%Y%m%d_%H%M%S")
         << ".log";
     return oss.str();
 }

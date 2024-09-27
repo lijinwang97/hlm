@@ -28,7 +28,7 @@ class HlmDecoder {
    private:
     AVCodecContext* codec_context_;
     AVFormatContext* format_context_;
-    std::string media_type_;
+    string media_type_;
     int stream_index_ = -1;
 };
 

@@ -25,7 +25,7 @@ HlmEncoder::~HlmEncoder() {
     }
 }
 
-bool HlmEncoder::initEncoderForImage(AVCodecContext* decoder_context, const std::string& codec_name) {
+bool HlmEncoder::initEncoderForImage(AVCodecContext* decoder_context, const string& codec_name) {
     const AVCodec* codec = codec_name.empty() ? avcodec_find_encoder(decoder_context->codec_id) : avcodec_find_encoder_by_name(codec_name.c_str());
     if (!codec) {
         hlm_error("Failed to find encoder. codec_name:{}", codec_name);
@@ -158,7 +158,7 @@ bool HlmEncoder::encodeFrame(AVFrame* frame, AVPacket* pkt) {
     return false;
 }
 
-void HlmEncoder::flushEncoder(std::function<void(AVPacket*, int)> checkAndSavePacket) {
+void HlmEncoder::flushEncoder(function<void(AVPacket*, int)> checkAndSavePacket) {
     AVPacket* packet = av_packet_alloc();
     int ret;
 

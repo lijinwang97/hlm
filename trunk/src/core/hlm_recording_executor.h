@@ -22,9 +22,8 @@ class HlmRecordingExecutor : public HlmExecutor {
     bool initOutputFile() override;
     void execute() override;
 
-    virtual void checkAndSavePacket(AVPacket* encoded_packet, int stream_index) = 0;
-
    protected:
+    void setHlsSegmentFilename();
     void endRecording();
 
    protected:

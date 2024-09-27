@@ -28,13 +28,16 @@ add_executable(hlm
     trunk/src/core/hlm_task.cc
     trunk/src/core/hlm_screenshot_task.cc
     trunk/src/core/hlm_recording_task.cc
+    trunk/src/core/hlm_mix_task.cc
 
     trunk/src/core/hlm_executor.cc
     trunk/src/core/hlm_screenshot_executor.cc
     trunk/src/core/hlm_recording_executor.cc
+    trunk/src/core/hlm_mix_executor.cc
 
     trunk/src/core/hlm_screenshot_strategy.cc
     trunk/src/core/hlm_recording_strategy.cc
+    trunk/src/core/hlm_mix_strategy.cc
     
     trunk/src/core/hlm_decoder.cc
     trunk/src/core/hlm_encoder.cc

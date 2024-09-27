@@ -6,7 +6,7 @@
 #include "utils/hlm_time.h"
 
 HlmRecordingExecutor::HlmRecordingExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& recording_method)
-    : HlmExecutor(stream_url, output_dir, filename, recording_method, MediaType::Recording), recording_method_(recording_method) {}
+    : HlmExecutor(stream_url, output_dir, filename, recording_method), recording_method_(recording_method) {}
 
 bool HlmRecordingExecutor::init() {
     if (!ensureDirectoryExists(output_dir_)) {
@@ -14,6 +14,7 @@ bool HlmRecordingExecutor::init() {
     }
 
     if (!openInputStream()) {
+        hlm_error("Failed to open input stream.");
         return false;
     }
 
@@ -48,32 +49,32 @@ bool HlmRecordingExecutor::initOutputFile() {
     if (recording_method_ == HlmRecordingMethod::Hls) {
         av_opt_set(output_format_context_->priv_data, "hls_time", "5", 0);
         av_opt_set(output_format_context_->priv_data, "hls_list_size", "0", 0);
-        av_opt_set(output_format_context_->priv_data, "hls_segment_filename", "segment%03d.ts", 0);
+        setHlsSegmentFilename();
     }
 
     hlm_info("Input video stream time_base: {}/{} | Output video stream time_base: {}/{}",
-              input_format_context_->streams[input_video_stream_index_]->time_base.num, input_format_context_->streams[input_video_stream_index_]->time_base.den,
-              output_video_stream->time_base.num, output_video_stream->time_base.den);
+             input_format_context_->streams[input_video_stream_index_]->time_base.num, input_format_context_->streams[input_video_stream_index_]->time_base.den,
+             output_video_stream->time_base.num, output_video_stream->time_base.den);
     hlm_info("Input video codec parameters: codec_type={}, bit_rate={}, width={}, height={}",
-              (int)input_format_context_->streams[input_video_stream_index_]->codecpar->codec_type, input_format_context_->streams[input_video_stream_index_]->codecpar->bit_rate,
-              input_format_context_->streams[input_video_stream_index_]->codecpar->width, input_format_context_->streams[input_video_stream_index_]->codecpar->height);
+             (int)input_format_context_->streams[input_video_stream_index_]->codecpar->codec_type, input_format_context_->streams[input_video_stream_index_]->codecpar->bit_rate,
+             input_format_context_->streams[input_video_stream_index_]->codecpar->width, input_format_context_->streams[input_video_stream_index_]->codecpar->height);
     hlm_info("Output video codec parameters: codec_type={}, bit_rate={}, width={}, height={}",
-              (int)output_video_stream->codecpar->codec_type, output_video_stream->codecpar->bit_rate,
-              output_video_stream->codecpar->width, output_video_stream->codecpar->height);
+             (int)output_video_stream->codecpar->codec_type, output_video_stream->codecpar->bit_rate,
+             output_video_stream->codecpar->width, output_video_stream->codecpar->height);
 
     AVStream* output_audio_stream = avformat_new_stream(output_format_context_, nullptr);
     avcodec_parameters_copy(output_audio_stream->codecpar, input_format_context_->streams[input_audio_stream_index_]->codecpar);
     output_audio_stream->time_base = input_format_context_->streams[input_audio_stream_index_]->time_base;
     output_audio_stream_index_ = output_audio_stream->index;
     hlm_info("Input audio stream time_base: {}/{} | Output audio stream time_base: {}/{}",
-              input_format_context_->streams[input_audio_stream_index_]->time_base.num, input_format_context_->streams[input_audio_stream_index_]->time_base.den,
-              output_audio_stream->time_base.num, output_audio_stream->time_base.den);
+             input_format_context_->streams[input_audio_stream_index_]->time_base.num, input_format_context_->streams[input_audio_stream_index_]->time_base.den,
+             output_audio_stream->time_base.num, output_audio_stream->time_base.den);
     hlm_info("Input audio codec parameters: codec_type={}, bit_rate={}, sample_rate={}, channels={}",
-              (int)input_format_context_->streams[input_audio_stream_index_]->codecpar->codec_type, input_format_context_->streams[input_audio_stream_index_]->codecpar->bit_rate,
-              input_format_context_->streams[input_audio_stream_index_]->codecpar->sample_rate, input_format_context_->streams[input_audio_stream_index_]->codecpar->channels);
+             (int)input_format_context_->streams[input_audio_stream_index_]->codecpar->codec_type, input_format_context_->streams[input_audio_stream_index_]->codecpar->bit_rate,
+             input_format_context_->streams[input_audio_stream_index_]->codecpar->sample_rate, input_format_context_->streams[input_audio_stream_index_]->codecpar->channels);
     hlm_info("Output audio codec parameters: codec_type={}, bit_rate={}, sample_rate={}, channels={}",
-              (int)output_audio_stream->codecpar->codec_type, output_audio_stream->codecpar->bit_rate,
-              output_audio_stream->codecpar->sample_rate, output_audio_stream->codecpar->channels);
+             (int)output_audio_stream->codecpar->codec_type, output_audio_stream->codecpar->bit_rate,
+             output_audio_stream->codecpar->sample_rate, output_audio_stream->codecpar->channels);
 
     if (!(output_format_context_->oformat->flags & AVFMT_NOFILE)) {
         if (avio_open(&output_format_context_->pb, filename_.c_str(), AVIO_FLAG_WRITE) < 0) {
@@ -117,8 +118,16 @@ void HlmRecordingExecutor::execute() {
         av_packet_unref(packet);
     }
     av_packet_free(&packet);
-
     endRecording();
+}
+
+void HlmRecordingExecutor::setHlsSegmentFilename() {
+    size_t pos = filename_.find_last_of('.');
+    if (pos != string::npos) {
+        filename_ = filename_.substr(0, pos);
+    }
+    filename_ += "_%03d.ts";
+    av_opt_set(output_format_context_->priv_data, "hls_segment_filename", filename_.c_str(), 0);
 }
 
 void HlmRecordingExecutor::endRecording() {

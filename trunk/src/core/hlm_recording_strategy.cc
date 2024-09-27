@@ -6,11 +6,7 @@ shared_ptr<HlmTask> HlmMp4RecordingStrategy::createTask(const string& stream_url
 }
 
 shared_ptr<HlmTask> HlmHlsRecordingStrategy::createTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, const json::rvalue& body) {
-    int segment_duration = body["segment_duration"].i();
-    if (segment_duration <= 0) {
-        throw invalid_argument("Segment duration must be positive.");
-    }
-    return make_shared<HlmHlsRecordingTask>(stream_url, method, output_dir, filename, segment_duration);
+    return make_shared<HlmHlsRecordingTask>(stream_url, method, output_dir, filename);
 }
 
 shared_ptr<HlmRecordingStrategy> HlmRecordingStrategyFactory::createStrategy(const string& method) {

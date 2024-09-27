@@ -26,6 +26,10 @@ const string Hls = "hls";
 const string Mp4 = "mp4";
 }  // namespace HlmRecordingMethod
 
+namespace HlmMixMethod {
+const string Mix = "mix";
+}  // namespace HlmMixMethod
+
 enum class MediaType {
     Screenshot,
     Recording,
@@ -35,7 +39,8 @@ enum class MediaType {
 // 通用的 HlmExecutor 基类
 class HlmExecutor {
    public:
-    HlmExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& media_method, MediaType media_type);
+   HlmExecutor();
+    HlmExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& media_method);
     virtual ~HlmExecutor();
 
     virtual bool init() = 0;
@@ -45,7 +50,7 @@ class HlmExecutor {
 
     void stop();
     bool isRunning() const;
-    bool ensureDirectoryExists(const std::string& dir_path);
+    bool ensureDirectoryExists(const string& dir_path);
     bool openInputStream();
     bool findStreams();
     bool initDecoder();
@@ -61,7 +66,6 @@ class HlmExecutor {
     string output_dir_;
     string filename_;
     string media_method_;
-    MediaType media_type_;
     bool running_ = false;
 
     AVFormatContext* input_format_context_ = nullptr;

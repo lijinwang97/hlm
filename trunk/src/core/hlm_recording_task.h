@@ -37,7 +37,7 @@ class HlmMp4RecordingTask : public HlmRecordingTask {
 // HLS 录制任务
 class HlmHlsRecordingTask : public HlmRecordingTask {
    public:
-    HlmHlsRecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename, int segment_duration);
+    HlmHlsRecordingTask(const string& stream_url, const string& method, const string& output_dir, const string& filename);
 
    protected:
     unique_ptr<HlmRecordingExecutor> createExecutor() override;
@@ -45,7 +45,6 @@ class HlmHlsRecordingTask : public HlmRecordingTask {
    private:
     string output_dir_;
     string filename_;
-    int segment_duration_;
 };
 
 #endif  // HLM_RECORDING_TASK_H

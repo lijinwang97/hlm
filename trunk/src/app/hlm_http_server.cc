@@ -3,12 +3,6 @@
 #include <iostream>
 #include <string>
 
-#include "core/hlm_recording_strategy.h"
-#include "core/hlm_recording_task.h"
-#include "core/hlm_screenshot_strategy.h"
-#include "core/hlm_screenshot_task.h"
-#include "utils/hlm_logger.h"
-
 HlmHttpServer::HlmHttpServer(int max_tasks) : task_manager_(max_tasks) {
     initRoutes();
     setLogLevel(LogLevel::Warning);
@@ -49,8 +43,8 @@ response HlmHttpServer::manageScreenshotReq(const request& req) {
         return createJsonResponse(INVALID_JSON, "Invalid JSON");
     }
 
-    std::map<std::string, std::string> errors;
-    std::vector<std::string> required_fields = {"stream_url", "method", "action"};
+    map<string, string> errors;
+    vector<string> required_fields = {"stream_url", "method", "action"};
     if (!validateJson(body, required_fields, errors)) {
         return createJsonResponse(INVALID_REQUEST, "Missing fields: " + errors.begin()->second);
     }
@@ -123,8 +117,8 @@ response HlmHttpServer::manageRecordingReq(const request& req) {
         return createJsonResponse(INVALID_JSON, "Invalid JSON");
     }
 
-    std::map<std::string, std::string> errors;
-    std::vector<std::string> required_fields = {"stream_url", "method", "action"};
+    map<string, string> errors;
+    vector<string> required_fields = {"stream_url", "method", "action"};
     if (!validateJson(body, required_fields, errors)) {
         return createJsonResponse(INVALID_REQUEST, "Missing fields: " + errors.begin()->second);
     }
@@ -190,17 +184,141 @@ response HlmHttpServer::stopRecording(const json::rvalue& body) {
 response HlmHttpServer::manageMixReq(const request& req) {
     auto body = json::load(req.body);
     if (!body) {
-        return response(400, "Invalid JSON");
+        return createJsonResponse(INVALID_JSON, "Invalid JSON");
     }
 
-    string input1 = body["input1"].s();
-    string input2 = body["input2"].s();
-    string output = body["output"].s();
+    map<string, string> errors;
+    vector<string> required_fields = {"output_url", "action", "streams"};
+    if (!validateJson(body, required_fields, errors)) {
+        return createJsonResponse(INVALID_REQUEST, "Missing fields: " + errors.begin()->second);
+    }
 
-    hlm_info("manageMixReq input1:{} input2:{} output:{}", input1, input2, output);
-    // mix_streams(input1, input2, output);
+    string action = body["action"].s();
+    if (action == HlmTaskAction::Start) {
+        return startMix(body);
+    } else if (action == HlmTaskAction::Update) {
+        return updateMix(body);
+    } else {
+        return createJsonResponse(INVALID_REQUEST, "Invalid action. Valid actions are 'start' or 'stop'.");
+    }
+}
 
-    return response(200, "Mixing successful!");
+response HlmHttpServer::startMix(const json::rvalue& body) {
+    auto validation_result = validateMixRequest(body);
+    if (validation_result.code != SUCCESS) {
+        return createJsonResponse(validation_result.code, validation_result.message);
+    }
+
+    HlmMixTaskParams params = parseMixParams(body);
+    if (params.output_url.empty()) {
+        return createJsonResponse(INVALID_REQUEST, "Failed to parse mixing parameters.");
+    }
+
+    try {
+        auto strategy = HlmMixStrategyFactory::createStrategy(HlmMixMethod::Mix);
+        auto task = strategy->createTask(params);
+        HlmTaskAddStatus status = task_manager_.addTask(task, params.output_url, HlmMixMethod::Mix);
+
+        switch (status) {
+            case HlmTaskAddStatus::TaskAlreadyRunning:
+                return createJsonResponse(INVALID_REQUEST, "A mixing task with the same RTMP URL is already running.");
+            case HlmTaskAddStatus::TaskQueued:
+                return createJsonResponse(QUEUED, "Mixing task queued, waiting for execution.");
+            case HlmTaskAddStatus::TaskStarted:
+                return createJsonResponse(SUCCESS, "Mixing task started.");
+            case HlmTaskAddStatus::QueueFull:
+                return createJsonResponse(INVALID_REQUEST, "Task queue is full, unable to add task.");
+        }
+    } catch (const invalid_argument& e) {
+        return createJsonResponse(INVALID_REQUEST, e.what());
+    }
+
+    return createJsonResponse(SUCCESS, "Mixing started successfully");
+}
+
+response HlmHttpServer::updateMix(const json::rvalue& body) {
+    string output_url = body["output_url"].s();
+    if (output_url.find("rtmp://") != 0) {
+        return {INVALID_REQUEST, "Mixing is only supported for RTMP streams."};
+    }
+
+    vector<HlmStreamInfo> streams = parseStreams(body["streams"]);
+    if (streams.empty()) {
+        return createJsonResponse(INVALID_REQUEST, "Missing fields: 'streams'");
+    }
+
+    HlmMixTaskParams params = {"", output_url, {}, streams};
+    
+
+
+    return createJsonResponse(SUCCESS, "Mixing updated successfully");
+}
+
+ValidationResult HlmHttpServer::validateMixRequest(const json::rvalue& body) {
+    if (!body.has("resolution")) {
+        return {INVALID_REQUEST, "Missing required fields: 'resolution'."};
+    }
+
+    string output_url = body["output_url"].s();
+    if (output_url.find("rtmp://") != 0) {
+        return {INVALID_REQUEST, "Mixing is only supported for RTMP streams."};
+    }
+
+    auto resolution_json = body["resolution"];
+    if (!resolution_json.has("width") || !resolution_json.has("height")) {
+        return {INVALID_REQUEST, "Resolution requires both 'width' and 'height'."};
+    }
+
+    int width = resolution_json["width"].i();
+    int height = resolution_json["height"].i();
+    if (width <= 0 || height <= 0) {
+        return {INVALID_REQUEST, "Resolution dimensions must be positive integers."};
+    }
+
+    return {SUCCESS, "Validation succeeded"};
+}
+
+HlmMixTaskParams HlmHttpServer::parseMixParams(const json::rvalue& body) {
+    HlmResolution resolution;
+    resolution.width = body["resolution"]["width"].i();
+    resolution.height = body["resolution"]["height"].i();
+
+    string background_image = body["background_image"].s();
+    string output_url = body["output_url"].s();
+
+    vector<HlmStreamInfo> streams = parseStreams(body["streams"]);
+    if (streams.size() == 0) {
+        return {};
+    }
+
+    return {background_image, output_url, resolution, streams};
+}
+
+vector<HlmStreamInfo> HlmHttpServer::parseStreams(const json::rvalue& streams_json) {
+    vector<HlmStreamInfo> streams;
+    for (const auto& stream : streams_json) {
+        if (!stream.has("id") || !stream.has("url") || !stream.has("width") ||
+            !stream.has("height") || !stream.has("x") || !stream.has("y") || !stream.has("z-index")) {
+            continue;
+        }
+
+        HlmStreamInfo stream_info;
+        stream_info.id = stream["id"].s();
+        stream_info.url = stream["url"].s();
+        stream_info.width = stream["width"].i();
+        stream_info.height = stream["height"].i();
+        stream_info.x = stream["x"].i();
+        stream_info.y = stream["y"].i();
+        stream_info.z_index = stream["z-index"].i();
+
+        if (stream_info.url.find("rtmp://") != 0) {
+            continue;
+        }
+
+        streams.push_back(stream_info);
+    }
+
+    return streams;
 }
 
 response HlmHttpServer::logWrapper(const request& req, function<response(const request&)> handler) {

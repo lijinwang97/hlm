@@ -2,27 +2,21 @@
 
 #include <algorithm>
 
+#include "hlm_mix_task.h"
 #include "utils/hlm_logger.h"
 
-HlmTask::HlmTask(TaskType type, const std::string& stream_url, const std::string& method)
+HlmTask::HlmTask(TaskType type, const string& stream_url, const string& method)
     : type_(type), stream_url_(stream_url), method_(method) {}
 
 HlmTask::TaskType HlmTask::getType() const { return type_; }
 
-const std::string& HlmTask::getStreamUrl() const { return stream_url_; }
+const string& HlmTask::getStreamUrl() const { return stream_url_; }
 
-const std::string& HlmTask::getMethod() const { return method_; }
+const string& HlmTask::getMethod() const { return method_; }
 
 void HlmTask::setCancelled(bool cancelled) { cancelled_ = cancelled; }
 
 bool HlmTask::isCancelled() const { return cancelled_; }
-
-HlmMixingTask::HlmMixingTask(const string& input1, const string& input2, const string& output)
-    : HlmTask(TaskType::Mixing, "stream_url", "method"), input1_(input1), input2_(input2) {}
-
-void HlmMixingTask::execute() {
-    cout << "Executing Mixing HlmTask with input1: " << input1_ << " and input2: " << input2_ << "\n";
-}
 
 HlmTaskManager::HlmTaskManager(int maxConcurrentTasks) : max_tasks_(maxConcurrentTasks) {}
 
@@ -46,11 +40,29 @@ HlmTaskAddStatus HlmTaskManager::addTask(shared_ptr<HlmTask> task, const string&
     }
 }
 
-bool HlmTaskManager::removeTask(const string& streamUrl, const string& method) {
-    std::lock_guard<std::mutex> lock(mutex_);
+HlmTaskAddStatus HlmTaskManager::updateTask(const string& streamUrl, const string& method, const HlmMixTaskParams& params) {
+    lock_guard<mutex> lock(mutex_);
     string task_key = createTaskKey(streamUrl, method);
 
-    auto it = std::find_if(active_tasks_.begin(), active_tasks_.end(), [&](const shared_ptr<HlmTask>& task) {
+    auto it = find_if(active_tasks_.begin(), active_tasks_.end(), [&](const shared_ptr<HlmTask>& task) {
+        return task->getStreamUrl() == streamUrl && task->getMethod() == method;
+    });
+
+    if (it != active_tasks_.end()) {
+        updateMixTask(*it, params);
+        hlm_info("Task updated for stream_url: {}, method: {}. Active tasks: {}/{}", streamUrl, method, active_tasks_.size(), max_tasks_);
+        return HlmTaskAddStatus::TaskUpdated;
+    }
+
+    hlm_info("No active task found for stream_url: {}, method: {}", streamUrl, method);
+    return HlmTaskAddStatus::TaskNotFound;
+}
+
+bool HlmTaskManager::removeTask(const string& streamUrl, const string& method) {
+    lock_guard<mutex> lock(mutex_);
+    string task_key = createTaskKey(streamUrl, method);
+
+    auto it = find_if(active_tasks_.begin(), active_tasks_.end(), [&](const shared_ptr<HlmTask>& task) {
         return task->getStreamUrl() == streamUrl && task->getMethod() == method;
     });
 
@@ -63,7 +75,7 @@ bool HlmTaskManager::removeTask(const string& streamUrl, const string& method) {
         return true;
     }
 
-    auto queue_it = std::find_if(task_queue_.begin(), task_queue_.end(), [&](const shared_ptr<HlmTask>& task) {
+    auto queue_it = find_if(task_queue_.begin(), task_queue_.end(), [&](const shared_ptr<HlmTask>& task) {
         return task->getStreamUrl() == streamUrl && task->getMethod() == method;
     });
 
@@ -111,7 +123,17 @@ void HlmTaskManager::executeTask(shared_ptr<HlmTask> task, const string& task_ke
 
 void HlmTaskManager::stopTask(shared_ptr<HlmTask> task) {
     task->stop();
-    hlm_info("Stopped {} task for stream_url: {}, method: {}", task->getMethod(), task->getStreamUrl(), task->getMethod());
+    hlm_info("Stopped {} task for stream_url: {}", task->getMethod(), task->getStreamUrl());
+}
+
+void HlmTaskManager::updateMixTask(shared_ptr<HlmTask> task, const HlmMixTaskParams& params) {
+    auto mix_task = dynamic_pointer_cast<HlmMixTask>(task);
+    if (mix_task) {
+        mix_task->update(params);
+        hlm_info("Updated {} task for stream_url: {}", task->getMethod(), task->getStreamUrl());
+    } else {
+        hlm_error("Failed to update task. Task is not of type HlmMixTask.");
+    }
 }
 
 string HlmTaskManager::createTaskKey(const string& stream_url, const string& method) {

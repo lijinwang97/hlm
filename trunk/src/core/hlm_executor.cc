@@ -5,8 +5,10 @@
 #include "utils/hlm_logger.h"
 #include "utils/hlm_time.h"
 
-HlmExecutor::HlmExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& media_method, MediaType media_type)
-    : stream_url_(stream_url), output_dir_(output_dir), filename_(filename), media_method_(media_method), media_type_(media_type) {     
+HlmExecutor::HlmExecutor() {}
+
+HlmExecutor::HlmExecutor(const string& stream_url, const string& output_dir, const string& filename, const string& media_method)
+    : stream_url_(stream_url), output_dir_(output_dir), filename_(filename), media_method_(media_method) {     
 }
 
 HlmExecutor::~HlmExecutor() {
