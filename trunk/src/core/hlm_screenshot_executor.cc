@@ -67,7 +67,7 @@ bool HlmScreenshotExecutor::initOutputFile() {
 bool HlmScreenshotExecutor::initEncoder() {
     if (input_video_stream_index_ != -1) {
         video_encoder_ = new HlmEncoder();
-        if (!video_encoder_->initEncoderForImage(video_decoder_->getContext(), "png")) {
+        if (!video_encoder_->initEncoderForImage(video_decoder_->getCodecContext(), "png")) {
             hlm_error("Failed to initialize video encoder for image.");
             return false;
         }

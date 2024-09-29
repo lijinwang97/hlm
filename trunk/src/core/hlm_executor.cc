@@ -145,17 +145,13 @@ bool HlmExecutor::initScaler() {
     if (!video_encoder_) {
         video_encoder_ = new HlmEncoder();
     }
-    if (!video_encoder_->initScaler(video_decoder_->getContext()->width, video_decoder_->getContext()->height, video_decoder_->getContext()->pix_fmt,
-                                    video_decoder_->getContext()->width, video_decoder_->getContext()->height, AV_PIX_FMT_RGB24)) {
+    if (!video_encoder_->initScaler(video_decoder_->getCodecContext()->width, video_decoder_->getCodecContext()->height, video_decoder_->getCodecContext()->pix_fmt,
+                                    video_decoder_->getCodecContext()->width, video_decoder_->getCodecContext()->height, AV_PIX_FMT_RGB24)) {
         hlm_error("Failed to initialize scaler.");
         return false;
     }
     return true;
 }
-
-
-
-
 
 int HlmExecutor::interruptCallback(void* ctx) {
     HlmExecutor* executor = static_cast<HlmExecutor*>(ctx);

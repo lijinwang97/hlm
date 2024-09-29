@@ -39,6 +39,7 @@ class HlmMixExecutor : public HlmExecutor {
     bool initOutputFile() override;
     void execute() override;
 
+    bool loadBackgroundImage(const string& image_url);
     void updateStreams(const HlmMixTaskParams& params);
 
    protected:
@@ -47,6 +48,8 @@ class HlmMixExecutor : public HlmExecutor {
    protected:
     HlmMixTaskParams params_;
     unordered_map<string, HlmStreamInfo> active_streams_;
+    AVPixelFormat target_pix_fmt_;
+    AVFrame* background_frame_ = nullptr;
     mutex mix_mutex_;
 };
 

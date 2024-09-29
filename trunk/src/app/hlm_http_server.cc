@@ -248,10 +248,16 @@ response HlmHttpServer::updateMix(const json::rvalue& body) {
     }
 
     HlmMixTaskParams params = {"", output_url, {}, streams};
-    
+    HlmTaskAddStatus status = task_manager_.updateTask(output_url, HlmMixMethod::Mix, params);
 
+    switch (status) {
+        case HlmTaskAddStatus::TaskUpdated:
+            return createJsonResponse(SUCCESS, "Mixing task updated successfully");
+        case HlmTaskAddStatus::TaskNotFound:
+            return createJsonResponse(INVALID_REQUEST, "No running task found for the given URL.");
+    }
 
-    return createJsonResponse(SUCCESS, "Mixing updated successfully");
+    return createJsonResponse(SUCCESS, "Mixing task updated successfully");
 }
 
 ValidationResult HlmHttpServer::validateMixRequest(const json::rvalue& body) {

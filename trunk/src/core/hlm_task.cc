@@ -129,8 +129,8 @@ void HlmTaskManager::stopTask(shared_ptr<HlmTask> task) {
 void HlmTaskManager::updateMixTask(shared_ptr<HlmTask> task, const HlmMixTaskParams& params) {
     auto mix_task = dynamic_pointer_cast<HlmMixTask>(task);
     if (mix_task) {
-        mix_task->update(params);
         hlm_info("Updated {} task for stream_url: {}", task->getMethod(), task->getStreamUrl());
+        mix_task->update(params);
     } else {
         hlm_error("Failed to update task. Task is not of type HlmMixTask.");
     }

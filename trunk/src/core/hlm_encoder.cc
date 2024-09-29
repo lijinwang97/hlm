@@ -53,87 +53,97 @@ bool HlmEncoder::initEncoderForImage(AVCodecContext* decoder_context, const stri
     return true;
 }
 
-bool HlmEncoder::initEncoderForVideo(AVCodecContext* decoder_context, AVFormatContext* input_format_context, AVFormatContext* output_format_context, int stream_index) {
-    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_H264);
+bool HlmEncoder::initVideoEncoder(const EncoderParams& params, AVFormatContext* output_format_context) {
+    AVStream* video_stream = avformat_new_stream(output_format_context, nullptr);
+    if (!video_stream) {
+        return false;
+    }
+
+    const AVCodec* codec = avcodec_find_encoder_by_name(params.video_encoder_name.c_str());
     if (!codec) {
-        hlm_error("Failed to find encoder. codec_name:{}", codec->name);
+        hlm_error("Codec {} not found", params.video_encoder_name);
         return false;
     }
 
-    ecodec_context_ = avcodec_alloc_context3(codec);
-    if (!ecodec_context_) {
-        hlm_error("Failed to allocate video encoder context.");
+    AVCodecContext* codec_context = avcodec_alloc_context3(codec);
+    if (!codec_context) {
+        hlm_error("Failed to allocate codec context for codec {}", params.video_encoder_name);
         return false;
     }
 
-    ecodec_context_->width = decoder_context->width;
-    ecodec_context_->height = decoder_context->height;
-    ecodec_context_->pix_fmt = decoder_context->pix_fmt;
-    ecodec_context_->bit_rate = decoder_context->bit_rate;
-    // ecodec_context_->time_base = (AVRational){1, 25};
+    codec_context->width = params.width;
+    codec_context->height = params.height;
+    codec_context->pix_fmt = params.pix_fmt;
+    codec_context->time_base = AVRational{1, params.fps};
+    codec_context->bit_rate = params.video_bitrate;
 
-    AVRational input_frame_rate = av_guess_frame_rate(input_format_context, input_format_context->streams[stream_index], nullptr);
-    ecodec_context_->time_base = av_inv_q(input_frame_rate);
-    hlm_info("Input frame rate: {}/{}", input_frame_rate.num, input_frame_rate.den);
-
-    if (avcodec_open2(ecodec_context_, codec, nullptr) < 0) {
-        hlm_error("Failed to open video encoder.");
+    video_stream->time_base = codec_context->time_base;
+    int ret = avcodec_parameters_from_context(video_stream->codecpar, codec_context);
+    if (ret < 0) {
+        hlm_error("Failed to copy codec parameters to stream");
+        avcodec_free_context(&codec_context);
         return false;
     }
 
-    stream_ = avformat_new_stream(output_format_context, codec);
-    if (!stream_) {
-        hlm_error("Failed to create new video stream.");
+    if (avcodec_open2(codec_context, codec, nullptr) < 0) {
+        hlm_error("Failed to open codec {}", params.video_encoder_name);
+        avcodec_free_context(&codec_context);
         return false;
     }
 
-    if (avcodec_parameters_from_context(stream_->codecpar, ecodec_context_) < 0) {
-        hlm_error("Failed to copy video encoder parameters to stream.");
-        return false;
-    }
-    stream_index_ = stream_->index;
+    hlm_info("Video Encoder initialized successfully. stream index: {} codec: {} Resolution: {}x{} FPS: {} Bitrate: {} Pixel Format: {}",
+             video_stream->index, params.video_encoder_name, params.width, params.height, params.fps, params.video_bitrate, av_get_pix_fmt_name(params.pix_fmt));
 
-    hlm_info("Video encoder initialized successfully with codec: {}, stream index:{}", codec->name, stream_index_);
+    stream_ = video_stream;
+    stream_index_ = video_stream->index;
+    ecodec_context_ = codec_context;
     return true;
 }
 
-bool HlmEncoder::initEncoderForAudio(AVCodecContext* decoder_context, AVFormatContext* output_format_context) {
-    const AVCodec* codec = avcodec_find_encoder(AV_CODEC_ID_AAC);
+bool HlmEncoder::initAudioEncoder(const EncoderParams& params, AVFormatContext* output_format_context) {
+    AVStream* audio_stream = avformat_new_stream(output_format_context, nullptr);
+    if (!audio_stream) {
+        return false;
+    }
+
+    const AVCodec* codec = avcodec_find_encoder_by_name(params.audio_encoder_name.c_str());
     if (!codec) {
-        hlm_error("Failed to find audio encoder.");
+        hlm_error("Codec {} not found", params.audio_encoder_name);
         return false;
     }
 
-    ecodec_context_ = avcodec_alloc_context3(codec);
-    if (!ecodec_context_) {
-        hlm_error("Failed to allocate audio encoder context.");
+    AVCodecContext* codec_context = avcodec_alloc_context3(codec);
+    if (!codec_context) {
+        hlm_error("Failed to allocate codec context for codec {}", params.audio_encoder_name);
         return false;
     }
 
-    ecodec_context_->sample_rate = decoder_context->sample_rate;
-    ecodec_context_->channels = decoder_context->channels;
-    ecodec_context_->channel_layout = decoder_context->channel_layout;
-    ecodec_context_->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : decoder_context->sample_fmt;
-    ecodec_context_->bit_rate = decoder_context->bit_rate;
+    codec_context->sample_rate = params.sample_rate;
+    codec_context->channels = params.channels;
+    codec_context->channel_layout = av_get_default_channel_layout(params.channels);
+    codec_context->sample_fmt = codec->sample_fmts ? codec->sample_fmts[0] : params.sample_fmt;
+    codec_context->bit_rate = params.audio_bitrate;
 
-    if (avcodec_open2(ecodec_context_, codec, nullptr) < 0) {
-        hlm_error("Failed to open audio encoder.");
+    audio_stream->time_base = AVRational{1, params.sample_rate};
+    int ret = avcodec_parameters_from_context(audio_stream->codecpar, codec_context);
+    if (ret < 0) {
+        hlm_error("Failed to copy codec parameters to stream");
+        avcodec_free_context(&codec_context);
         return false;
     }
 
-    stream_ = avformat_new_stream(output_format_context, codec);
-    if (!stream_) {
-        hlm_error("Failed to create new video stream.");
+    if (avcodec_open2(codec_context, codec, nullptr) < 0) {
+        hlm_error("Failed to open codec {}", params.audio_encoder_name);
+        avcodec_free_context(&codec_context);
         return false;
     }
 
-    if (avcodec_parameters_from_context(stream_->codecpar, ecodec_context_) < 0) {
-        hlm_error("Failed to copy video encoder parameters to stream.");
-        return false;
-    }
-    stream_index_ = stream_->index;
+    hlm_info("Audio Encoder initialized successfully. stream index: {} codec: {} Sample Rate: {} Channels: {} Channels: {} Bitrate: {} Sample Format: {}",
+             audio_stream->index, params.audio_encoder_name, params.sample_rate, params.channels, params.audio_bitrate, av_get_sample_fmt_name(codec_context->sample_fmt));
 
-    hlm_info("Audio encoder initialized successfully with codec: {}, stream index:{}", codec->name, stream_index_);
+    stream_ = audio_stream;
+    stream_index_ = audio_stream->index;
+    ecodec_context_ = codec_context;
     return true;
 }
 

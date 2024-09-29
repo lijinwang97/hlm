@@ -16,14 +16,29 @@ extern "C" {
 
 using namespace std;
 
+struct EncoderParams {
+    int width = 0;                               // 视频宽度
+    int height = 0;                              // 视频高度
+    int fps = 30;                                // 帧率
+    int video_bitrate = 2000000;                 // 视频码率
+    AVPixelFormat pix_fmt = AV_PIX_FMT_YUV420P;  // 像素格式
+    string video_encoder_name = "libx264";       // 视频编码器名，h264软编：libx264，h264硬编：h264_nvenc，h265软编：libx265，h265硬编：hevc_nvenc
+
+    int sample_rate = 44100;                         // 音频采样率
+    int channels = 2;                                // 音频通道数
+    int audio_bitrate = 128000;                      // 音频码率
+    AVSampleFormat sample_fmt = AV_SAMPLE_FMT_FLTP;  // 音频格式
+    string audio_encoder_name = "aac";               // 音频编码器名，默认AAC
+};
+
 class HlmEncoder {
    public:
     HlmEncoder();
     ~HlmEncoder();
 
-    bool initEncoderForImage(AVCodecContext* decoder_context, const std::string& codec_name = "");
-    bool initEncoderForVideo(AVCodecContext* decoder_context, AVFormatContext* input_format_context,AVFormatContext* output_format_context, int stream_index);
-    bool initEncoderForAudio(AVCodecContext* decoder_context, AVFormatContext* output_format_context);
+    bool initEncoderForImage(AVCodecContext* decoder_context, const string& codec_name = "");
+    bool initVideoEncoder(const EncoderParams& params, AVFormatContext* output_format_context);
+    bool initAudioEncoder(const EncoderParams& params, AVFormatContext* output_format_context);
     bool encodeFrame(AVFrame* frame, AVPacket* pkt);
     void flushEncoder(function<void(AVPacket*, int)> checkAndSavePacket);
     AVCodecContext* getContext() const;
